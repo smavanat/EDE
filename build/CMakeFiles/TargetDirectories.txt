@@ -1,3 +1,0 @@
-/home/edwin/Documents/My Work/C/EDE/build/CMakeFiles/engine.dir
-/home/edwin/Documents/My Work/C/EDE/build/CMakeFiles/edit_cache.dir
-/home/edwin/Documents/My Work/C/EDE/build/CMakeFiles/rebuild_cache.dir
