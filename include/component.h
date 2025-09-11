@@ -2,6 +2,7 @@
 #define __COMPONENT_H__
 #include "maths.h"
 #include <stdbool.h>
+#include "shader.h"
 
 #define MAX_COMPONENTS (32)
 
@@ -35,7 +36,9 @@ typedef struct {
 //Needs to be filled in later once OpenGL is setup
 //Holds destructible sprite texture data
 typedef struct {
-
+    shader *shader;
+    unsigned int texture;
+    unsigned int VAO;
 } sprite;
 
 //Holds indestructible sprite data from a tilemap or a texture atlas.

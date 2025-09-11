@@ -148,6 +148,6 @@ int add(int_hashmap* h, int key, int value) {
 
     //If we are above the load factor of 0.75, we need to resize the hashmap
     if(h->size > h->capacity * 0.75)
-        resize(2 * h->capacity);
+        resize(h, 2 * h->capacity);
     return -1;
 }

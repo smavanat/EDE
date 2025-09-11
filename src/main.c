@@ -1,9 +1,15 @@
 #include "../externals/glad/glad.h"
 #include "../externals/GLFW/glfw3.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include "../include/shader.h"
 #include "../include/stb_image.h"
 #include "../externals/cglm/cglm.h"
+#include "../include/basic_systems.h"
+#include "../include/world.h"
+
+world *w;
+ecs_system *renderSystem;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
@@ -15,31 +21,47 @@ void process_input(GLFWwindow* window) {
     }
 }
 
-int main(int argc, char** argv) {
+int init(GLFWwindow **window) {
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     // glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); //For MacOS
 
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Learn OpenGL", NULL, NULL);
+    w = world_alloc();
+    renderSystem = malloc(sizeof(ecs_system));
+    renderSystem->init_func = &render_init;
+    renderSystem->update_func = &render_update;
+    push_value(w->systems, ecs_system *, renderSystem);
+
+    world_init(w);
+
+    *window = glfwCreateWindow(800, 600, "Learn OpenGL", NULL, NULL);
     if(window == NULL) {
         printf("Failed to create GLFW window");
         glfwTerminate();
-        return -1;
+        return 0;
     }
-    glfwMakeContextCurrent(window);
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glfwMakeContextCurrent(*window);
+    glfwSetFramebufferSizeCallback(*window, framebuffer_size_callback);
 
     if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         printf("Failed to initialise GLAD");
-        return -1;
+        return 0;
     }
+    return 1;
+}
 
-    // framebuffer_size_callback(window, 800, 600);
+int load(/*shader **s, unsigned int *VAO, unsigned int *texture*/void) {
+    //Creating the entity to store the sprite component
+    entity e = create_entity(w->p);
+    sprite *spr = malloc(sizeof(sprite));
+    spr->shader = load_shader("../data/shaders/shader.vs", "../data/shaders/shader.fs");
+    spr->VAO = 0;
+    spr->texture = 0;
 
     //Making the shader
-    shader* s = load_shader("../data/shaders/shader.vs", "../data/shaders/shader.fs");
+    // *s = load_shader("../data/shaders/shader.vs", "../data/shaders/shader.fs");
 
     float vertices[] = {
         // positions          // colors           // texture coords
@@ -52,12 +74,12 @@ int main(int argc, char** argv) {
         0, 1, 3, // first triangle
         1, 2, 3  // second triangle
     };
-    unsigned int VBO, VAO, EBO;
-    glGenVertexArrays(1, &VAO);
+    unsigned int VBO, EBO;
+    glGenVertexArrays(1, &spr->VAO);
     glGenBuffers(1, &VBO);
     glGenBuffers(1, &EBO);
 
-    glBindVertexArray(VAO);
+    glBindVertexArray(spr->VAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
@@ -77,10 +99,8 @@ int main(int argc, char** argv) {
 
 
     // load and create a texture
-    // -------------------------
-    unsigned int texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture); // all upcoming GL_TEXTURE_2D operations now have effect on this texture object
+    glGenTextures(1, &spr->texture);
+    glBindTexture(GL_TEXTURE_2D, spr->texture); // all upcoming GL_TEXTURE_2D operations now have effect on this texture object
     // set the texture wrapping parameters
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -89,7 +109,6 @@ int main(int argc, char** argv) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     // load image, create texture and generate mipmaps
     int width, height, nrChannels;
-    // The FileSystem::getPath(...) is part of the GitHub repository so we can find files on any IDE/platform; replace it with your own image path.
     unsigned char *data = stbi_load("../data/assets/container.jpg", &width, &height, &nrChannels, 0);
     if (data)
     {
@@ -99,41 +118,59 @@ int main(int argc, char** argv) {
     else
     {
         printf("Failed to load texture\n");
+        return 0;
     }
     stbi_image_free(data);
     // uncomment this call to draw in wireframe polygons.
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-    //Render loop
-    while(!glfwWindowShouldClose(window)) {
-        //input
-        process_input(window);
+    add_component_to_entity(w->p, e, SPRITE, spr);
+    sys_query(w);
+    return 1;
+}
 
-        //Rendering commands here
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f); //Setting background colour
-        glClear(GL_COLOR_BUFFER_BIT);
+int main(int argc, char** argv) {
+    GLFWwindow *window = NULL;
+    // shader *s = NULL;
+    // unsigned int VAO, texture;
 
-        //bind texture
-        glBindTexture(GL_TEXTURE_2D, texture);
-        // mat3 *transform;
-        // vec2 tv = (vec2){0.5f, -0.5f};
-        // glm_translate2d(transform, &tv);
-        // glm_rotate2d(transform, )
+    if(init(&window)) {
+        printf("Initialised\n");
+        if(load(/*&s, &VAO, &texture*/)) {
+            printf("Loaded\n");
+            // if(s == NULL){
+            //     printf("s is null\n");
+            // }
+            // printf("Shader id: %i\n", s->id);
 
-        use(s);
-        glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+            //Render loop
+            while(!glfwWindowShouldClose(window)) {
+                //input
+                process_input(window);
 
-        //check and call events and swap the buffers
-        glfwSwapBuffers(window);
-        glfwPollEvents();
+                //Rendering commands here
+                glClearColor(1.0f, 1.0f, 1.0f, 1.0f); //Setting background colour
+                glClear(GL_COLOR_BUFFER_BIT);
+
+                //bind texture
+                // glBindTexture(GL_TEXTURE_2D, texture);
+                // // mat3 *transform;
+                // // vec2 tv = (vec2){0.5f, -0.5f};
+                // // glm_translate2d(transform, &tv);
+                // // glm_rotate2d(transform, )
+                //
+                // use(s);
+                // glBindVertexArray(VAO);
+                // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+                world_update(w, 0);
+
+                //check and call events and swap the buffers
+                glfwSwapBuffers(window);
+                glfwPollEvents();
+            }
+
+            glfwTerminate();
+            return 0;
+        }
     }
-
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &EBO);
-    glDeleteProgram(s->id);
-
-    glfwTerminate();
-    return 0;
 }
