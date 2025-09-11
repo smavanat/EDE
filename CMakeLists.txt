@@ -21,6 +21,25 @@ include(FetchContent)
 
 # FetchContent_MakeAvailable(box2d)
 
+FetchContent_Declare(
+        glfw
+        GIT_REPOSITORY https://github.com/glfw/glfw
+        GIT_TAG 3.4
+)
+
+
+FetchContent_GetProperties(glfw)
+
+if(NOT glfw_POPULATED)
+    FetchContent_Populate(glfw)
+    set(GLFW_BUILD_EXAMPLES OFF CACHE INTERNAL "Build the GLFW example programs")
+    set(GLFW_BUILD_TESTS OFF CACHE INTERNAL "Build the GLFW test programs")
+    set(GLFW_BUILD_DOCS OFF CACHE INTERNAL "Build the GLFW documentation")
+    set(GLFW_INSTALL OFF CACHE INTERNAL "Generate installation target")
+    add_subdirectory(${glfw_SOURCE_DIR} ${glfw_BINARY_DIR})
+
+endif()
+
 # Collect all .cpp files in current directory
 file(GLOB C_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
 # file(GLOB CPP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
@@ -38,7 +57,7 @@ target_include_directories(engine
 # target_link_libraries(engine PRIVATE box2d::box2d)
 target_link_libraries(engine
                         PRIVATE
-                        "${CMAKE_SOURCE_DIR}/externals/libs_linux/libglfw3.a"
+                        glfw
                         GL X11 pthread Xi dl m)
 
 # Have to copy all of the assets to the output directory
