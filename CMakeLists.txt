@@ -46,23 +46,23 @@ file(GLOB C_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
 set(SOURCES ${C_SOURCES})
 
 # Create the executable target
-add_executable(engine ${SOURCES})
+add_executable(ede ${SOURCES})
 
 # Add include directories (external libraries)
-target_include_directories(engine
+target_include_directories(ede
     PRIVATE
         "${CMAKE_SOURCE_DIR}/externals/Include"
 )
 
-# target_link_libraries(engine PRIVATE box2d::box2d)
-target_link_libraries(engine
+# target_link_libraries(ede PRIVATE box2d::box2d)
+target_link_libraries(ede
                         PRIVATE
                         glfw
                         GL X11 pthread Xi dl m)
 
 # Have to copy all of the assets to the output directory
-add_custom_command(TARGET engine POST_BUILD
+add_custom_command(TARGET ede POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_SOURCE_DIR}/data/assets"
-        $<TARGET_FILE_DIR:engine>/assets
+        $<TARGET_FILE_DIR:ede>/assets
 )
