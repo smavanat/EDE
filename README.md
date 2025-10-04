@@ -29,6 +29,7 @@ The following is a list of features that I plan to add/have added to this projec
 Basic ECS  
 Rendering System  
 Shader Loading  
+Synchronous Events (Observer Pattern and Publisher-Subscriber Pattern)  
 ### Planned  
 Pathfinding System  
 Grid System  
@@ -37,4 +38,4 @@ World Chunking
 GUI for add/removing/modifying/placing entities  
 World data loading and saving  
 Optimised ECS with entity chunking and proper archetypes  
-Events  
+Asynchronous Events  
