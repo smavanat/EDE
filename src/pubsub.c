@@ -1,9 +1,9 @@
-#include "../include/event.h"
+#include "../include/pubsub.h"
 #include <stdlib.h>
 
 //Parameters:
 //*manager: the event manager to be initialised
-void event_manager_init(event_manager *manager) {
+void pb_event_manager_init(pb_event_manager *manager) {
     for(int i = 0; i < MAX_EVENT_TYPES; i++) {
         manager->subscribers[i] = NULL;
     }
@@ -14,8 +14,8 @@ void event_manager_init(event_manager *manager) {
 //type: the type of event
 //cb: the callback function to be called upon this event being published
 //*user_data: the struct that want to be subscribed to this event
-void event_manager_subscribe(event_manager *manager, event_type type, event_callback cb, void *user_data) {
-    subscriber *new_subscriber = malloc(sizeof(subscriber));
+void pb_event_manager_subscribe(pb_event_manager *manager, pb_event_type type, pb_event_callback cb, void *user_data) {
+    pb_subscriber *new_subscriber = malloc(sizeof(pb_subscriber));
     new_subscriber->callback = cb;
     new_subscriber->user_data = user_data;
     new_subscriber->next = manager->subscribers[type];
@@ -28,8 +28,8 @@ void event_manager_subscribe(event_manager *manager, event_type type, event_call
 //*manager: the manager managing the current event
 //type: the type of event
 //*user_data: the struct that will unsubscribe from this event
-void event_manager_unsubscribe(event_manager *manager, event_type type, void *user_data) {
-    subscriber *current = manager->subscribers[type];
+void pb_event_manager_unsubscribe(pb_event_manager *manager, pb_event_type type, void *user_data) {
+    pb_subscriber *current = manager->subscribers[type];
     while(current->user_data != user_data && current != NULL) {
         current = current->next;
     }
@@ -43,8 +43,8 @@ void event_manager_unsubscribe(event_manager *manager, event_type type, void *us
 //Parameters:
 //*manager: the event manager
 //the event to be published
-void event_manager_publish(event_manager *manager, event *event) {
-    subscriber *current = manager->subscribers[event->type];
+void pb_event_manager_publish(pb_event_manager *manager, pb_event *event) {
+    pb_subscriber *current = manager->subscribers[event->type];
     while(current) {
         current->callback(event, current->user_data);
         current = current->next;
@@ -53,11 +53,11 @@ void event_manager_publish(event_manager *manager, event *event) {
 
 //Parameters:
 //*manager: the event manager to be cleared
-void event_manager_clear(event_manager *manager) {
+void pb_event_manager_clear(pb_event_manager *manager) {
     for(int i = 0; i < MAX_EVENT_TYPES; i++) {
-        subscriber *current = manager->subscribers[i];
+        pb_subscriber *current = manager->subscribers[i];
         while(current) {
-            subscriber *temp = current;
+            pb_subscriber *temp = current;
             current = current->next;
             free(temp);
         }
