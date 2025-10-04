@@ -60,9 +60,6 @@ int load(/*shader **s, unsigned int *VAO, unsigned int *texture*/void) {
     spr->VAO = 0;
     spr->texture = 0;
 
-    //Making the shader
-    // *s = load_shader("../data/shaders/shader.vs", "../data/shaders/shader.fs");
-
     float vertices[] = {
         // positions          // colors           // texture coords
          0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right

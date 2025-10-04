@@ -50,7 +50,7 @@ int read_to_end(char const *path, char **buf, bool addNull) {
 
     //Add null terminator
     if(addNull) {
-        buf[fsz] = "\0";
+        (*buf)[fsz] = '\0';
     }
 
     return fsz;
