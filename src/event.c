@@ -1,12 +1,19 @@
 #include "../include/event.h"
 #include <stdlib.h>
 
+//Parameters:
+//*manager: the event manager to be initialised
 void event_manager_init(event_manager *manager) {
     for(int i = 0; i < MAX_EVENT_TYPES; i++) {
         manager->subscribers[i] = NULL;
     }
 }
 
+//Parameters:
+//*manager: the manager managing the current event
+//type: the type of event
+//cb: the callback function to be called upon this event being published
+//*user_data: the struct that want to be subscribed to this event
 void event_manager_subscribe(event_manager *manager, event_type type, event_callback cb, void *user_data) {
     subscriber *new_subscriber = malloc(sizeof(subscriber));
     new_subscriber->callback = cb;
@@ -17,6 +24,10 @@ void event_manager_subscribe(event_manager *manager, event_type type, event_call
     manager->subscribers[type] = new_subscriber;
 }
 
+//Parameters:
+//*manager: the manager managing the current event
+//type: the type of event
+//*user_data: the struct that will unsubscribe from this event
 void event_manager_unsubscribe(event_manager *manager, event_type type, void *user_data) {
     subscriber *current = manager->subscribers[type];
     while(current->user_data != user_data && current != NULL) {
@@ -28,6 +39,10 @@ void event_manager_unsubscribe(event_manager *manager, event_type type, void *us
         free(current);
     }
 }
+
+//Parameters:
+//*manager: the event manager
+//the event to be published
 void event_manager_publish(event_manager *manager, event *event) {
     subscriber *current = manager->subscribers[event->type];
     while(current) {
@@ -36,6 +51,8 @@ void event_manager_publish(event_manager *manager, event *event) {
     }
 }
 
+//Parameters:
+//*manager: the event manager to be cleared
 void event_manager_clear(event_manager *manager) {
     for(int i = 0; i < MAX_EVENT_TYPES; i++) {
         subscriber *current = manager->subscribers[i];
