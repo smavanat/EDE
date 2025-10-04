@@ -10,32 +10,40 @@ typedef struct {
     void* data;
 } list;
 
+//Increases the size of the list once capacity is reached
 void grow(list *slice, size_t size);
 
-#define remove_val(list, type, val) do {            \
-        for(int i = 0; i < list->size; i++) {       \
-            if(((type*)(list)->data)[i] == (val)){  \
-                (list)->size--;                     \
-                ((type*)(list)->data)[i] = ((type*)(list)->data)[(list)->size];    \
-                break;                              \
-            }                                       \
-        }                                           \
+//Macro for removing a value from the list by value. Does not maintain order
+#define remove_val(list, type, val) do {                                            \
+        for(int i = 0; i < list->size; i++) {                                       \
+            if(((type*)(list)->data)[i] == (val)){                                  \
+                (list)->size--;                                                     \
+                ((type*)(list)->data)[i] = ((type*)(list)->data)[(list)->size];     \
+                break;                                                              \
+            }                                                                       \
+        }                                                                           \
     } while(0);
 
-#define remove_at(list, type, pos) do {             \
-        (list)->size--;                             \
-        ((type*)(list)->data)[pos] = ((type*)(list)->data)[(list)->size];\
+//Macro for removing a value from the list by index. Does not maintain order
+#define remove_at(list, type, pos) do {                                             \
+        (list)->size--;                                                             \
+        ((type*)(list)->data)[pos] = ((type*)(list)->data)[(list)->size];           \
     } while(0);
 
-#define push_value(lst, type, val) do { \
-    if ((lst)->size >= (lst)->capacity) \
-        grow((lst), sizeof(type)); \
-    ((type*)(lst)->data)[(lst)->size++] = (val); \
+//Macro for adding a value to the list
+#define push_value(lst, type, val) do {                                             \
+    if ((lst)->size >= (lst)->capacity)                                             \
+        grow((lst), sizeof(type));                                                  \
+    ((type*)(lst)->data)[(lst)->size++] = (val);                                    \
 } while (0)
 
+//Getting a value from the list
+#define get_value(lst, type, index) ((type *)lst->data)[index]
 
+//Allocation function
 list *list_alloc(size_t arr_size, size_t t_size);
 
+//Not really used but could be useful?
 typedef struct {
     void* data;
     size_t size;

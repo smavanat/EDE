@@ -102,7 +102,7 @@ void add_component_to_entity(plaza *p, entity e, component_type t, void *c) {
     //Removing entity from its old archetype:
     if(p->entitySignatures[e] != 0) {
         for(int i = 0; i < p->entityArchetypes->size; i++) {
-            if(((archetype**)p->entityArchetypes->data)[i]->signature == p->entitySignatures[e]) {
+            if(get_value(p->entityArchetypes, archetype *, i)->signature == p->entitySignatures[e]) {
                 //This is very inefficient. When doing chunking store a sparse set that uses 
                 //an int32 split into three parts:  one to represent the archetype that the entity is in
                 //                                  one to represent the chunk the entity is in
@@ -110,8 +110,9 @@ void add_component_to_entity(plaza *p, entity e, component_type t, void *c) {
                 //Each part can be 8 bits
                 //This will lead to much faster lookup
                 for(int j = 0; j < p->entityArchetypes->size; j++) {
-                    if(e == ((archetype**)p->entityArchetypes->data)[i]->entities[j]) {
-                        ((archetype**)p->entityArchetypes->data)[i]->entities[j] = ((archetype**)p->entityArchetypes->data)[i]->entities[p->entityArchetypes->size-1];
+                    // get_value(p->entityArchetypes, archetype *, i)
+                    if(e == get_value(p->entityArchetypes, archetype *, i)->entities[j]) {
+                        get_value(p->entityArchetypes, archetype *, i)->entities[j] = get_value(p->entityArchetypes, archetype *, i)->entities[p->entityArchetypes->size-1];
                         break;
                     }
                 }
@@ -127,9 +128,9 @@ void add_component_to_entity(plaza *p, entity e, component_type t, void *c) {
     //Adding an entity to a specific archetype
     bool foundSig = false;
     for(int i = 0; i < p->entityArchetypes->size; i++) {
-        if(((archetype**)p->entityArchetypes->data)[i]->signature == p->entitySignatures[e]) {
+        if(get_value(p->entityArchetypes, archetype *, i)->signature == p->entitySignatures[e]) {
             foundSig = true;
-            ((archetype**)p->entityArchetypes->data)[i]->entities[p->entityArchetypes->size] = e;
+            get_value(p->entityArchetypes, archetype *, i)->entities[p->entityArchetypes->size] = e;
             p->entityArchetypes->size++;
             break;
         }
@@ -148,7 +149,7 @@ void add_component_to_entity(plaza *p, entity e, component_type t, void *c) {
 void remove_component_from_entity(plaza *p, entity e, component_type t) {
     //Removing entity from its old archetype:
     for(int i = 0; i < p->entityArchetypes->size; i++) {
-        if(((archetype**)p->entityArchetypes->data)[i]->signature == p->entitySignatures[e]) {
+        if(get_value(p->entityArchetypes, archetype *, i)->signature == p->entitySignatures[e]) {
             //This is very inefficient. When doing chunking store a sparse set that uses 
             //an int32 split into three parts:  one to represent the archetype that the entity is in
             //                                  one to represent the chunk the entity is in
@@ -156,8 +157,8 @@ void remove_component_from_entity(plaza *p, entity e, component_type t) {
             //Each part can be 8 bits
             //This will lead to much faster lookup
             for(int j = 0; j < p->entityArchetypes->size; j++) {
-                if(e == ((archetype**)p->entityArchetypes->data)[i]->entities[j]) {
-                    ((archetype**)p->entityArchetypes->data)[i]->entities[j] = ((archetype**)p->entityArchetypes->data)[i]->entities[p->entityArchetypes->size-1];
+                if(e == get_value(p->entityArchetypes, archetype *, i)->entities[j]) {
+                    get_value(p->entityArchetypes, archetype *, i)->entities[j] = get_value(p->entityArchetypes, archetype *, i)->entities[p->entityArchetypes->size-1];
                     break;
                 }
             }
@@ -173,9 +174,9 @@ void remove_component_from_entity(plaza *p, entity e, component_type t) {
         //Adding an entity to a specific archetype
         bool foundSig = false;
         for(int i = 0; i < p->entityArchetypes->size; i++) {
-            if(((archetype**)p->entityArchetypes->data)[i]->signature == p->entitySignatures[e]) {
+            if(get_value(p->entityArchetypes, archetype *, i)->signature == p->entitySignatures[e]) {
                 foundSig = true;
-                ((archetype**)p->entityArchetypes->data)[i]->entities[p->entityArchetypes->size] = e;
+                get_value(p->entityArchetypes, archetype *, i)->entities[p->entityArchetypes->size] = e;
                 p->entityArchetypes->size++;
                 break;
             }
@@ -199,15 +200,15 @@ void *get_component_from_entity(plaza *p, entity e, component_type t) {
 archetype_array *query_signature(plaza *p, signature s) {
     int count = 0;
     for(int i = 0; i < p->entityArchetypes->size; i++) {
-        if((((archetype**)p->entityArchetypes->data)[i]->signature & s) == s) {
+        if((get_value(p->entityArchetypes, archetype *, i)->signature & s) == s) {
             count++;
         }
     }
     archetype_array *ret = list_alloc(count, sizeof(archetype *));
 
     for(int i = 0; i < p->entityArchetypes->size; i++) {
-        if((((archetype**)p->entityArchetypes->data)[i]->signature & s) == s) {
-            push_value(ret, archetype *, ((archetype **)p->entityArchetypes->data)[i]);
+        if((get_value(p->entityArchetypes, archetype *, i)->signature & s) == s) {
+            push_value(ret, archetype *, get_value(p->entityArchetypes, archetype *, i));
         }
     }
 
