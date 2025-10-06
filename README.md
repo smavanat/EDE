@@ -35,7 +35,7 @@ Pathfinding System
 Grid System  
 Destruction System  
 World Chunking  
-GUI for add/removing/modifying/placing entities  
+GUI for adding/removing/modifying/placing entities  
 World data loading and saving  
 Optimised ECS with entity chunking and proper archetypes  
 Asynchronous Events  
