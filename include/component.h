@@ -28,7 +28,7 @@ typedef enum{
 } collider_type;
 
 typedef struct {
-    Vector2 position;
+    vector2 position;
     float zIndex;
     float angle;
 } transform;
@@ -36,7 +36,7 @@ typedef struct {
 //Needs to be filled in later once OpenGL is setup
 //Holds destructible sprite texture data
 typedef struct {
-    shader *shader;
+    shader shader;
     unsigned int texture;
     unsigned int VAO;
 } sprite;
@@ -63,9 +63,9 @@ typedef struct {
 
 //Holds pathfinding data to be used to calculate a viable path between two points which is then re-stored in this component
 typedef struct {
-    Vector2* path; //This needs to be replaced with a proper array that holds the size once I've finished working on those
-    Vector2 startPos;
-    Vector2 endPos;
+    vector2* path; //This needs to be replaced with a proper array that holds the size once I've finished working on those
+    vector2 startPos;
+    vector2 endPos;
     int size; //The size of the agent that is traversing through this path
 } pathfinding;
 

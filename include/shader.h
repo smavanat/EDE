@@ -3,20 +3,18 @@
 #include "../externals/glad/glad.h"
 #include <stdbool.h>
 
-typedef struct {
-    int id;
-} shader;
+typedef uint32_t shader;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-shader *load_shader(char *vertexPath, char *fragmentPath);
+shader load_shader(char *vertexPath, char *fragmentPath);
 
-void use(shader *shader);
+void use(shader shader);
 
-void set_bool(shader *s, char *name, bool value);
-void set_int(shader *s, char *name, int value);
-void set_float(shader *s, char *name, float value);
+void set_bool(shader s, char *name, bool value);
+void set_int(shader s, char *name, int value);
+void set_float(shader s, char *name, float value);
 
 #ifdef __cplusplus
 }

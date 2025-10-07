@@ -52,7 +52,7 @@ int init(GLFWwindow **window) {
     return 1;
 }
 
-int load(/*shader **s, unsigned int *VAO, unsigned int *texture*/void) {
+int load(void) {
     //Creating the entity to store the sprite component
     entity e = create_entity(w->p);
     sprite *spr = malloc(sizeof(sprite));
@@ -67,7 +67,7 @@ int load(/*shader **s, unsigned int *VAO, unsigned int *texture*/void) {
         -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
         -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left 
     };
-    unsigned int indices[] = {  
+    unsigned int indices[] = {
         0, 1, 3, // first triangle
         1, 2, 3  // second triangle
     };
@@ -133,20 +133,15 @@ int main(int argc, char** argv) {
 
     if(init(&window)) {
         printf("Initialised\n");
-        if(load(/*&s, &VAO, &texture*/)) {
+        if(load()) {
             printf("Loaded\n");
-            // if(s == NULL){
-            //     printf("s is null\n");
-            // }
-            // printf("Shader id: %i\n", s->id);
-
             //Render loop
             while(!glfwWindowShouldClose(window)) {
                 //input
                 process_input(window);
 
                 //Rendering commands here
-                glClearColor(1.0f, 1.0f, 1.0f, 1.0f); //Setting background colour
+                glClearColor(0.0f, 0.0f, 0.0f, 0.0f); //Setting background colour
                 glClear(GL_COLOR_BUFFER_BIT);
 
                 //bind texture
@@ -155,10 +150,6 @@ int main(int argc, char** argv) {
                 // // vec2 tv = (vec2){0.5f, -0.5f};
                 // // glm_translate2d(transform, &tv);
                 // // glm_rotate2d(transform, )
-                //
-                // use(s);
-                // glBindVertexArray(VAO);
-                // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
                 world_update(w, 0);
 
                 //check and call events and swap the buffers
