@@ -240,9 +240,20 @@ void debug_render_flush(debug_renderer *r) {
     use(r->shader);
     glBindVertexArray(r->vao);
     glBindBuffer(GL_ARRAY_BUFFER, r->vbo);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, r->vertex_count * sizeof(debug_render_vertex), r->points);
 
+    //Drawing points:
+    glBufferSubData(GL_ARRAY_BUFFER, 0, r->vertex_count * sizeof(debug_render_vertex), r->points);
     glDrawArrays(GL_POINTS, 0, r->vertex_count);
+
+    //Drawing lines:
+    glBufferSubData(GL_ARRAY_BUFFER, 0, r->line_count * sizeof(debug_render_vertex), r->lines);
+    glDrawArrays(GL_LINES, 0, r->line_count);
+
+    //Drawing quads:
+    glBufferSubData(GL_ARRAY_BUFFER, 0, r->quad_count* sizeof(debug_render_vertex), r->quads);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, r->ebo);
+    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, r->index_count * sizeof(uint32_t), r->index_data); //Copies the quad data into the vbo
+    glDrawArrays(GL_LINES, 0, r->quad_count);
 
     //Need to reset the counts to flush the data out
     r->vertex_count = 0;
