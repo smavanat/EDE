@@ -78,6 +78,8 @@ typedef struct {
     shader shader;
 
     size_t vertex_count;
+    size_t line_count;
+    size_t quad_count;
     size_t index_count;
 
     debug_render_vertex points[MAX_POINTS];

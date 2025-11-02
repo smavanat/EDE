@@ -221,6 +221,9 @@ void debug_render_init(debug_renderer *r, char *vertPath, char *fragPath) {
     r->shader = load_shader(vertPath, fragPath);
 
     r->vertex_count = 0;
+    r->quad_count = 0;
+    r->index_count = 0;
+    r->line_count = 0;
     glPointSize(10.0f);
 }
 
@@ -241,19 +244,27 @@ void debug_render_flush(debug_renderer *r) {
 
     glDrawArrays(GL_POINTS, 0, r->vertex_count);
 
-    r->vertex_count = 0; //Need to reset the vertex count to flush the vertex data out
+    //Need to reset the counts to flush the data out
+    r->vertex_count = 0;
+    r->quad_count = 0;
+    r->index_count = 0;
+    r->line_count = 0;
 }
 
-//NOTE:NEED TO FIGURE OUT WHAT WE'RE GOING TO DO WHEN WE REACH THE VERTEX LIMIT!!!!
+//NOTE: For now, there is just a hard limit on the number of objects that can be renderered by the debug renderer perframe. Will change this as necessary
 
 //Renders a quad on the screen
 void render_draw_quad(debug_renderer *r, quad *dimensions, vector4 colour, int wireframe) {
-    uint32_t base_index = r->vertex_count;
+    if(r->quad_count + 4 >= MAX_POINTS *4) {
+        printf("Max amount of quads reached for this frame");
+        return;
+    }
+    uint32_t base_index = r->quad_count;
 
-    r->points[r->vertex_count++] = (debug_render_vertex){(vector2){dimensions->x+dimensions->w, dimensions->y}, colour};
-    r->points[r->vertex_count++] = (debug_render_vertex){(vector2){dimensions->x, dimensions->y}, colour};
-    r->points[r->vertex_count++] = (debug_render_vertex){(vector2){dimensions->x, dimensions->y+dimensions->h}, colour};
-    r->points[r->vertex_count++] = (debug_render_vertex){(vector2){dimensions->x+dimensions->w, dimensions->y+dimensions->h}, colour};
+    r->points[r->quad_count++] = (debug_render_vertex){(vector2){dimensions->x+dimensions->w, dimensions->y}, colour};
+    r->points[r->quad_count++] = (debug_render_vertex){(vector2){dimensions->x, dimensions->y}, colour};
+    r->points[r->quad_count++] = (debug_render_vertex){(vector2){dimensions->x, dimensions->y+dimensions->h}, colour};
+    r->points[r->quad_count++] = (debug_render_vertex){(vector2){dimensions->x+dimensions->w, dimensions->y+dimensions->h}, colour};
 
     //Need to also add ebo data so we can remove overlapping vertices
     //First triangle
@@ -269,12 +280,21 @@ void render_draw_quad(debug_renderer *r, quad *dimensions, vector4 colour, int w
 
 //Draws a line between two points
 void render_draw_line(debug_renderer*r, vector2 start, vector2 end, vector4 colour) {
+    if(r->line_count + 2 >= MAX_POINTS *2) {
+        printf("Max amount of lines reached for this frame");
+        return;
+    }
+
     r->points[r->vertex_count++] = (debug_render_vertex){start, colour};
     r->points[r->vertex_count++] = (debug_render_vertex){end, colour};
 }
 
 //Draws a point
 void render_draw_point(debug_renderer *r, vector2 position, vector4 colour) {
+    if(r->vertex_count + 2 >= MAX_POINTS) {
+        printf("Max amount of vertices reached for this frame");
+        return;
+    }
     r->points[r->vertex_count++] = (debug_render_vertex){position, colour};
 }
 
