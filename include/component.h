@@ -36,9 +36,12 @@ typedef struct {
 //Needs to be filled in later once OpenGL is setup
 //Holds destructible sprite texture data
 typedef struct {
-    shader shader;
+    // shader shader;
     unsigned int texture;
-    unsigned int VAO;
+    vector2 coords[4];
+    vector4 colours[4];
+    vector2 uv[4];
+    // unsigned int VAO;
 } sprite;
 
 //Holds indestructible sprite data from a tilemap or a texture atlas.
