@@ -18,6 +18,7 @@
 #define MAX_INDECIES MAX_QUADS * INDECIES_PER_QUAD + MAX_TRIANGLES * INDECIES_PER_TRIANGLE
 #define MAX_TEXTURES 32
 #define INVALID_TEX_INDEX 1248
+#define MAX_POINTS 2048
 
 //Data structure to hold data about a single render vertex
 typedef struct {
@@ -77,8 +78,12 @@ typedef struct {
     shader shader;
 
     size_t vertex_count;
+    size_t index_count;
 
-    debug_render_vertex points[MAX_VERTICES];
+    debug_render_vertex points[MAX_POINTS];
+    debug_render_vertex lines[MAX_POINTS*2];
+    debug_render_vertex quads[MAX_POINTS*4];
+    uint32_t index_data[MAX_POINTS * 6];
 } debug_renderer;
 
 //Allocate the renderer and assign its variables

@@ -164,6 +164,37 @@ void render_push_quad(renderer *r, vector2 coords[4], vector4 colours[4], vector
     r->index_data[r->index_count++] = base_index + 3;
 }
 
+//Load a texture
+uint32_t render_texture_load(char *filepath) {
+    uint32_t id;
+    // load and create a texture
+    glGenTextures(1, &id);
+    glBindTexture(GL_TEXTURE_2D, id); // all upcoming GL_TEXTURE_2D operations now have effect on this texture object
+
+    // set the texture wrapping parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    // set texture filtering parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // load image, create texture and generate mipmaps
+    int width, height, nrChannels;
+    unsigned char *data = stbi_load("../data/assets/container.jpg", &width, &height, &nrChannels, 0);
+    if (data)
+    {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else
+    {
+        printf("Failed to load texture\n");
+        return 0;
+    }
+    stbi_image_free(data);
+    return id;
+}
+
 //Allocate the renderer and assign its variables
 void debug_render_init(debug_renderer *r, char *vertPath, char *fragPath) {
     //Getting the vao
@@ -176,9 +207,9 @@ void debug_render_init(debug_renderer *r, char *vertPath, char *fragPath) {
     glBufferData(GL_ARRAY_BUFFER, MAX_VERTICES * sizeof(debug_render_vertex), NULL, GL_DYNAMIC_DRAW);
 
     //Getting the ebo
-    // glGenBuffers(1, &r->ebo);
-    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, r->ebo);
-    // glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(uint32_t) * MAX_INDECIES, NULL, GL_DYNAMIC_DRAW);
+    glGenBuffers(1, &r->ebo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, r->ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(uint32_t) * MAX_INDECIES, NULL, GL_DYNAMIC_DRAW);
 
     //Setting the vertex attributes
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(debug_render_vertex), (void *)offsetof(debug_render_vertex, position)); //Vertex Position
@@ -213,14 +244,33 @@ void debug_render_flush(debug_renderer *r) {
     r->vertex_count = 0; //Need to reset the vertex count to flush the vertex data out
 }
 
+//NOTE:NEED TO FIGURE OUT WHAT WE'RE GOING TO DO WHEN WE REACH THE VERTEX LIMIT!!!!
+
 //Renders a quad on the screen
 void render_draw_quad(debug_renderer *r, quad *dimensions, vector4 colour, int wireframe) {
+    uint32_t base_index = r->vertex_count;
 
+    r->points[r->vertex_count++] = (debug_render_vertex){(vector2){dimensions->x+dimensions->w, dimensions->y}, colour};
+    r->points[r->vertex_count++] = (debug_render_vertex){(vector2){dimensions->x, dimensions->y}, colour};
+    r->points[r->vertex_count++] = (debug_render_vertex){(vector2){dimensions->x, dimensions->y+dimensions->h}, colour};
+    r->points[r->vertex_count++] = (debug_render_vertex){(vector2){dimensions->x+dimensions->w, dimensions->y+dimensions->h}, colour};
+
+    //Need to also add ebo data so we can remove overlapping vertices
+    //First triangle
+    r->index_data[r->index_count++] = base_index;
+    r->index_data[r->index_count++] = base_index + 1;
+    r->index_data[r->index_count++] = base_index + 3;
+
+    //Second triangle
+    r->index_data[r->index_count++] = base_index + 1;
+    r->index_data[r->index_count++] = base_index + 2;
+    r->index_data[r->index_count++] = base_index + 3;
 }
 
 //Draws a line between two points
 void render_draw_line(debug_renderer*r, vector2 start, vector2 end, vector4 colour) {
-
+    r->points[r->vertex_count++] = (debug_render_vertex){start, colour};
+    r->points[r->vertex_count++] = (debug_render_vertex){end, colour};
 }
 
 //Draws a point
@@ -231,35 +281,4 @@ void render_draw_point(debug_renderer *r, vector2 position, vector4 colour) {
 //Draws a circle
 void render_draw_circle(debug_renderer* r, vector2 center, float radius, vector4 colour, int wireframe) {
 
-}
-
-//Load a texture
-uint32_t render_texture_load(char *filepath) {
-    uint32_t id;
-    // load and create a texture
-    glGenTextures(1, &id);
-    glBindTexture(GL_TEXTURE_2D, id); // all upcoming GL_TEXTURE_2D operations now have effect on this texture object
-
-    // set the texture wrapping parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    // set texture filtering parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    // load image, create texture and generate mipmaps
-    int width, height, nrChannels;
-    unsigned char *data = stbi_load("../data/assets/container.jpg", &width, &height, &nrChannels, 0);
-    if (data)
-    {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else
-    {
-        printf("Failed to load texture\n");
-        return 0;
-    }
-    stbi_image_free(data);
-    return id;
 }
