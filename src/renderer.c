@@ -1,10 +1,8 @@
 #include "../include/renderer.h"
 #include <stddef.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <sys/types.h>
 #include"../include/stb_image.h"
-#include <stdlib.h>
 
 //Allocate the renderer and assign its variables
 void render_init(renderer *r, char *vertPath, char *fragPath) {
@@ -123,49 +121,6 @@ void render_push_triangle(renderer *r, vector2 coords[3], vector4 colours[3], ve
     }
 }
 
-//Old triangle addition function
-// void render_push_triangle(renderer *r, vector2 a, vector2 b, vector2 c, vector4 a_colour, vector4 b_colour, vector4 c_colour, vector2 a_uv, vector2 b_uv, vector2 c_uv, uint32_t texture) {
-//     // 1248 is just an invalid value since this is an unsigned number so -1 doesn't work
-//     uint32_t tex_index = INVALID_TEX_INDEX;
-//     for(int i = 0; i < r->texture_count; i++) {
-//         if(r->textures[i] == texture){
-//             tex_index = i;
-//             break;
-//         }
-//     }
-//
-//     //If the texture is not currently held
-//     //r->texture_count < MAX_TEXTURES confirms we don't write more than the available texture slots
-//     if(tex_index == INVALID_TEX_INDEX && r->texture_count < MAX_TEXTURES) {
-//         r->textures[r->texture_count] = texture;
-//         tex_index = r->texture_count;
-//         r->texture_count++;
-//     }
-//
-//     r->triangle_data[r->triangle_count * 3 + 0].pos = a;
-//     r->triangle_data[r->triangle_count * 3 + 0].colour = a_colour;
-//     r->triangle_data[r->triangle_count * 3 + 0].uv= a_uv;
-//     r->triangle_data[r->triangle_count * 3 + 0].tex_index= tex_index;
-//     r->triangle_data[r->triangle_count * 3 + 1].pos = b;
-//     r->triangle_data[r->triangle_count * 3 + 1].colour = b_colour;
-//     r->triangle_data[r->triangle_count * 3 + 1].uv= b_uv;
-//     r->triangle_data[r->triangle_count * 3 + 1].tex_index= tex_index;
-//     r->triangle_data[r->triangle_count * 3 + 2].pos = c;
-//     r->triangle_data[r->triangle_count * 3 + 2].colour = c_colour;
-//     r->triangle_data[r->triangle_count * 3 + 2].uv= c_uv;
-//     r->triangle_data[r->triangle_count * 3 + 2].tex_index= tex_index;
-//
-//     r->triangle_count++;
-//
-//     //Workaround for overflowing the triangle buffer
-//     if(r->triangle_count == MAX_TRIANGLES || tex_index == INVALID_TEX_INDEX) {
-//         render_end_frame(r);
-//         render_begin_frame(r);
-//
-//         // render_push_triangle(r, a, b, c, a_colour, b_colour, c_colour, a_uv, b_uv, c_uv, texture);
-//     }
-// }
-
 //A a quad polygon to the current frame
 void render_push_quad(renderer *r, vector2 coords[4], vector4 colours[4], vector2 uv[4], uint32_t texture) {
     uint32_t tex_index = INVALID_TEX_INDEX; //Setting default value to invalid so successful operations can make the index valid again
@@ -209,6 +164,66 @@ void render_push_quad(renderer *r, vector2 coords[4], vector4 colours[4], vector
     r->index_data[r->index_count++] = base_index + 1;
     r->index_data[r->index_count++] = base_index + 2;
     r->index_data[r->index_count++] = base_index + 3;
+}
+
+//Allocate the renderer and assign its variables
+void debug_render_init(debug_renderer *r, char *vertPath, char *fragPath) {
+    //Getting the vao
+    glGenVertexArrays(1, &r->vao);
+    glBindVertexArray(r->vao);
+
+    //Getting the vbo
+    glGenBuffers(1, &r->vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, r->vbo);
+    glBufferData(GL_ARRAY_BUFFER, MAX_VERTICES * sizeof(render_vertex), NULL, GL_DYNAMIC_DRAW);
+
+    //Getting the ebo
+    glGenBuffers(1, &r->ebo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, r->ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(uint32_t) * MAX_INDECIES, NULL, GL_DYNAMIC_DRAW);
+
+    //Setting the vertex attributes
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(debug_render_vertex), (void *)offsetof(debug_render_vertex, position)); //Vertex Position
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(debug_render_vertex), (void *)offsetof(debug_render_vertex, colour)); //Vertex Colour
+    glEnableVertexAttribArray(1);
+
+    //Getting the shader for this renderer
+    r->shader = load_shader(vertPath, fragPath);
+    use(r->shader);
+}
+
+//Destroy the renderer
+void debug_render_free(debug_renderer *r) {
+    glDeleteBuffers(1, &r->vbo);
+    glDeleteVertexArrays(1, &r->vao);
+
+    glDeleteProgram(r->shader);
+}
+
+//Begin a single render frame (this is equivalent to a gpu render call)
+void debug_render_flush(debug_renderer *r) {
+
+}
+
+//Renders a quad on the screen
+void render_draw_quad(debug_renderer *r, quad *dimensions, uint32_t colour, int wireframe) {
+
+}
+
+//Draws a line between two points
+void render_draw_line(debug_renderer*r, vector2 start, vector2 end, uint32_t colour) {
+
+}
+
+//Draws a point
+void render_draw_point(debug_renderer *r, vector2 position, uint32_t colour) {
+
+}
+
+//Draws a circle
+void render_draw_circle(debug_renderer* r, vector2 center, float radius, uint32_t colour, int wireframe) {
+
 }
 
 //Load a texture

@@ -63,6 +63,34 @@ void render_push_triangle(renderer *r, vector2 coords[3], vector4 colours[3], ve
 void render_push_quad(renderer *r, vector2 coords[4], vector4 colours[4], vector2 uv[4], uint32_t texture);
 //Load a texture
 uint32_t render_texture_load(char *filepath);
-// void render_push_triangle(renderer *r, vector2 a, vector2 b, vector2 c, vector4 a_colour, vector4 b_colour, vector4 c_colour, vector2 a_uv, vector2 b_uv, vector2 c_uv, uint32_t texture);
+
+typedef struct {
+    vector2 position;
+    vector4 colour;
+} debug_render_vertex;
+
+typedef struct {
+    uint32_t vao;
+    uint32_t vbo;
+    uint32_t ebo;
+    shader shader;
+
+    render_vertex points[MAX_VERTICES];
+} debug_renderer;
+
+//Allocate the renderer and assign its variables
+void debug_render_init(debug_renderer *r, char *vertPath, char *fragPath);
+//Destroy the renderer
+void debug_render_free(debug_renderer *r);
+//Begin a single render frame (this is equivalent to a gpu render call)
+void debug_render_flush(debug_renderer *r);
+//Renders a quad on the screen
+void render_draw_quad(debug_renderer *r, quad *dimensions, uint32_t colour, int wireframe);
+//Draws a line between two points
+void render_draw_line(debug_renderer*r, vector2 start, vector2 end, uint32_t colour);
+//Draws a point
+void render_draw_point(debug_renderer *r, vector2 position, uint32_t colour);
+//Draws a circle
+void render_draw_circle(debug_renderer* r, vector2 center, float radius, uint32_t colour, int wireframe);
 
 #endif

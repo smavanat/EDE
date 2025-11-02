@@ -67,71 +67,10 @@ int load(void) {
     //Creating the entity to store the sprite component
     entity e = create_entity(w->p);
     sprite *spr = malloc(sizeof(sprite));
-    // spr->shader = load_shader("../data/shaders/shader.vs", "../data/shaders/shader.fs");
-    // spr->VAO = 0;
     spr->texture = render_texture_load("../data/assets/container.jpg");
     memcpy(spr->colours, (vector4[4]){{1.0f, 0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 0.0f, 0.0f}}, sizeof(spr->colours));
     memcpy(spr->coords, (vector2[4]){{0.5f, 0.5f}, {0.5f, -0.5f}, {-0.5f, -0.5f}, {-0.5f, 0.5f}}, sizeof(spr->coords));
     memcpy(spr->uv, (vector2[4]){{1.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 1.0f}}, sizeof(spr->uv));
-    //
-    // float vertices[] = {
-    //     // positions          // colors           // texture coords
-    //      0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
-    //      0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
-    //     -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
-    //     -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left
-    // };
-    // unsigned int indices[] = {
-    //     0, 1, 3, // first triangle
-    //     1, 2, 3  // second triangle
-    // };
-    // unsigned int VBO, EBO;
-    // glGenVertexArrays(1, &spr->VAO);
-    // glGenBuffers(1, &VBO);
-    // glGenBuffers(1, &EBO);
-    //
-    // glBindVertexArray(spr->VAO);
-    //
-    // glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    // glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    //
-    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    // glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-    //
-    // // position attribute
-    // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    // glEnableVertexAttribArray(0);
-    // // color attribute
-    // glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    // glEnableVertexAttribArray(1);
-    // // texture coord attribute
-    // glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    // glEnableVertexAttribArray(2);
-    //
-    //
-    // // load and create a texture
-    // glGenTextures(1, &spr->texture);
-    // glBindTexture(GL_TEXTURE_2D, spr->texture); // all upcoming GL_TEXTURE_2D operations now have effect on this texture object
-    // // set the texture wrapping parameters
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    // // set texture filtering parameters
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    // load image, create texture and generate mipmaps
-    // int width, height, nrChannels;
-    // unsigned char *data = stbi_load("../data/assets/container.jpg", &width, &height, &nrChannels, 0);
-    // if (data)
-    // {
-    //     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-    //     glGenerateMipmap(GL_TEXTURE_2D);
-    // }
-    // else
-    // {
-    //     printf("Failed to load texture\n");
-    //     return 0;
-    // }
-    // stbi_image_free(data);
     // uncomment this call to draw in wireframe polygons.
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
@@ -153,10 +92,6 @@ int main(int argc, char** argv) {
             while(!glfwWindowShouldClose(window)) {
                 //input
                 process_input(window);
-
-                //Rendering commands here
-                // glClearColor(0.0f, 0.0f, 0.0f, 0.0f); //Setting background colour
-                // glClear(GL_COLOR_BUFFER_BIT);
 
                 render_begin_frame(gRenderer);
                 //bind texture
