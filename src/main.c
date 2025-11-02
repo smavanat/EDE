@@ -13,6 +13,7 @@
 world *w;
 ecs_system *renderSystem;
 renderer *gRenderer;
+debug_renderer *dRenderer;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
@@ -46,9 +47,16 @@ int init(GLFWwindow **window) {
     }
 
     gRenderer = malloc(sizeof(renderer));
-    render_init(gRenderer, "../data/shaders/shader.vs", "../data/shaders/shader.fs"); //DOES NOT INITIALISE THE RENDERER
+    render_init(gRenderer, "../data/shaders/shader.vs", "../data/shaders/shader.fs");
     if(!gRenderer){
         printf("Failed to initialise the renderer\n");
+        return 0;
+    }
+
+    dRenderer = malloc(sizeof(debug_renderer));
+    debug_render_init(dRenderer, "../data/shaders/debug_shader.vs", "../data/shaders/debug_shader.fs");
+    if(!dRenderer){
+        printf("Failed to initialise the debug renderer\n");
         return 0;
     }
 
@@ -81,8 +89,6 @@ int load(void) {
 
 int main(int argc, char** argv) {
     GLFWwindow *window = NULL;
-    // shader *s = NULL;
-    // unsigned int VAO, texture;
 
     if(init(&window)) {
         printf("Initialised\n");
@@ -93,20 +99,21 @@ int main(int argc, char** argv) {
                 //input
                 process_input(window);
 
+                glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
+                glClear(GL_COLOR_BUFFER_BIT);
                 render_begin_frame(gRenderer);
-                //bind texture
-                // glBindTexture(GL_TEXTURE_2D, texture);
-                // // mat3 *transform;
-                // // vec2 tv = (vec2){0.5f, -0.5f};
-                // // glm_translate2d(transform, &tv);
-                // // glm_rotate2d(transform, )
                 world_update(w, 0);
                 render_end_frame(gRenderer);
+                render_draw_point(dRenderer, (vector2){-1.0f, -1.0f}, (vector4){0.0f, 0.0f, 1.0f, 1.0f});
+                debug_render_flush(dRenderer);
 
                 //check and call events and swap the buffers
                 glfwSwapBuffers(window);
                 glfwPollEvents();
             }
+
+            render_free(gRenderer);
+            debug_render_free(dRenderer);
 
             glfwTerminate();
             return 0;

@@ -1,5 +1,6 @@
 #ifndef __RENDERER_H__
 #define __RENDERER_H__
+#include <stddef.h>
 #include <stdint.h>
 #include "../include/shader.h"
 #include "../include/maths.h"
@@ -75,7 +76,9 @@ typedef struct {
     uint32_t ebo;
     shader shader;
 
-    render_vertex points[MAX_VERTICES];
+    size_t vertex_count;
+
+    debug_render_vertex points[MAX_VERTICES];
 } debug_renderer;
 
 //Allocate the renderer and assign its variables
@@ -85,12 +88,12 @@ void debug_render_free(debug_renderer *r);
 //Begin a single render frame (this is equivalent to a gpu render call)
 void debug_render_flush(debug_renderer *r);
 //Renders a quad on the screen
-void render_draw_quad(debug_renderer *r, quad *dimensions, uint32_t colour, int wireframe);
+void render_draw_quad(debug_renderer *r, quad *dimensions, vector4 colour, int wireframe);
 //Draws a line between two points
-void render_draw_line(debug_renderer*r, vector2 start, vector2 end, uint32_t colour);
+void render_draw_line(debug_renderer*r, vector2 start, vector2 end, vector4 colour);
 //Draws a point
-void render_draw_point(debug_renderer *r, vector2 position, uint32_t colour);
+void render_draw_point(debug_renderer *r, vector2 position, vector4 colour);
 //Draws a circle
-void render_draw_circle(debug_renderer* r, vector2 center, float radius, uint32_t colour, int wireframe);
+void render_draw_circle(debug_renderer* r, vector2 center, float radius, vector4 colour, int wireframe);
 
 #endif

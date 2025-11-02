@@ -78,7 +78,12 @@ shader load_shader(char *vertexPath, char *fragmentPath) {
 }
 
 void use(shader shader) {
-    glUseProgram(shader);
+    static GLuint currentProgram = 0;
+
+    if ((GLuint)currentProgram != shader)
+        glUseProgram(shader);
+
+    // glUseProgram(shader);
 }
 
 void set_bool(shader s, char *name, bool value) {

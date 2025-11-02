@@ -34,7 +34,7 @@ void render_init(renderer *r, char *vertPath, char *fragPath) {
 
     //Getting the shader for this renderer
     r->shader = load_shader(vertPath, fragPath);
-    use(r->shader);
+    // use(r->shader);
 
     uint32_t tex_loc = glGetUniformLocation(r->shader, "u_tex");
     int32_t textures[MAX_TEXTURES] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31};
@@ -58,9 +58,7 @@ void render_free(renderer *r) {
 
 //Resetting the renderer for a new draw call
 void render_begin_frame(renderer *r) {
-    glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-
+    use(r->shader);
     r->vertex_count = 0;
     r->index_count = 0;
     r->texture_count = 0;
@@ -175,12 +173,12 @@ void debug_render_init(debug_renderer *r, char *vertPath, char *fragPath) {
     //Getting the vbo
     glGenBuffers(1, &r->vbo);
     glBindBuffer(GL_ARRAY_BUFFER, r->vbo);
-    glBufferData(GL_ARRAY_BUFFER, MAX_VERTICES * sizeof(render_vertex), NULL, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, MAX_VERTICES * sizeof(debug_render_vertex), NULL, GL_DYNAMIC_DRAW);
 
     //Getting the ebo
-    glGenBuffers(1, &r->ebo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, r->ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(uint32_t) * MAX_INDECIES, NULL, GL_DYNAMIC_DRAW);
+    // glGenBuffers(1, &r->ebo);
+    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, r->ebo);
+    // glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(uint32_t) * MAX_INDECIES, NULL, GL_DYNAMIC_DRAW);
 
     //Setting the vertex attributes
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(debug_render_vertex), (void *)offsetof(debug_render_vertex, position)); //Vertex Position
@@ -190,7 +188,9 @@ void debug_render_init(debug_renderer *r, char *vertPath, char *fragPath) {
 
     //Getting the shader for this renderer
     r->shader = load_shader(vertPath, fragPath);
-    use(r->shader);
+
+    r->vertex_count = 0;
+    glPointSize(10.0f);
 }
 
 //Destroy the renderer
@@ -203,26 +203,33 @@ void debug_render_free(debug_renderer *r) {
 
 //Begin a single render frame (this is equivalent to a gpu render call)
 void debug_render_flush(debug_renderer *r) {
+    use(r->shader);
+    glBindVertexArray(r->vao);
+    glBindBuffer(GL_ARRAY_BUFFER, r->vbo);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, r->vertex_count * sizeof(debug_render_vertex), r->points);
 
+    glDrawArrays(GL_POINTS, 0, r->vertex_count);
+
+    r->vertex_count = 0; //Need to reset the vertex count to flush the vertex data out
 }
 
 //Renders a quad on the screen
-void render_draw_quad(debug_renderer *r, quad *dimensions, uint32_t colour, int wireframe) {
+void render_draw_quad(debug_renderer *r, quad *dimensions, vector4 colour, int wireframe) {
 
 }
 
 //Draws a line between two points
-void render_draw_line(debug_renderer*r, vector2 start, vector2 end, uint32_t colour) {
+void render_draw_line(debug_renderer*r, vector2 start, vector2 end, vector4 colour) {
 
 }
 
 //Draws a point
-void render_draw_point(debug_renderer *r, vector2 position, uint32_t colour) {
-
+void render_draw_point(debug_renderer *r, vector2 position, vector4 colour) {
+    r->points[r->vertex_count++] = (debug_render_vertex){position, colour};
 }
 
 //Draws a circle
-void render_draw_circle(debug_renderer* r, vector2 center, float radius, uint32_t colour, int wireframe) {
+void render_draw_circle(debug_renderer* r, vector2 center, float radius, vector4 colour, int wireframe) {
 
 }
 
