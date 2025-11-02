@@ -45,6 +45,7 @@ int init(GLFWwindow **window) {
         return 0;
     }
 
+    gRenderer = malloc(sizeof(renderer));
     render_init(gRenderer, "../data/shaders/shader.vs", "../data/shaders/shader.fs"); //DOES NOT INITIALISE THE RENDERER
     if(!gRenderer){
         printf("Failed to initialise the renderer\n");
@@ -70,15 +71,15 @@ int load(void) {
     // spr->VAO = 0;
     spr->texture = render_texture_load("../data/assets/container.jpg");
     memcpy(spr->colours, (vector4[4]){{1.0f, 0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 0.0f, 0.0f}}, sizeof(spr->colours));
-    memcpy(spr->coords, (vector2[4]){{1.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 1.0f}}, sizeof(spr->coords));
-    memcpy(spr->colours, (vector4[4]){{0.5f, 0.5f}, {0.5f, -0.5f}, {-0.5f, -0.5f}, {-0.5f, 0.5f}}, sizeof(spr->uv));
+    memcpy(spr->coords, (vector2[4]){{0.5f, 0.5f}, {0.5f, -0.5f}, {-0.5f, -0.5f}, {-0.5f, 0.5f}}, sizeof(spr->coords));
+    memcpy(spr->uv, (vector2[4]){{1.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 1.0f}}, sizeof(spr->uv));
     //
     // float vertices[] = {
     //     // positions          // colors           // texture coords
     //      0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
     //      0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
     //     -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
-    //     -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left 
+    //     -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left
     // };
     // unsigned int indices[] = {
     //     0, 1, 3, // first triangle

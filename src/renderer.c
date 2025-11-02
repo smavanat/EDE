@@ -8,7 +8,7 @@
 
 //Allocate the renderer and assign its variables
 void render_init(renderer *r, char *vertPath, char *fragPath) {
-    r = malloc(sizeof(renderer)); //Allocating the memory for the renderer
+    // r = malloc(sizeof(renderer)); //Allocating the memory for the renderer
 
     //Getting the vao
     glGenVertexArrays(1, &r->vao);
@@ -60,10 +60,9 @@ void render_free(renderer *r) {
 
 //Resetting the renderer for a new draw call
 void render_begin_frame(renderer *r) {
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    printf("Renderer pointer: %p\n", r);
     r->vertex_count = 0;
     r->index_count = 0;
     r->texture_count = 0;
@@ -204,11 +203,11 @@ void render_push_quad(renderer *r, vector2 coords[4], vector4 colours[4], vector
     //First triangle
     r->index_data[r->index_count++] = base_index;
     r->index_data[r->index_count++] = base_index + 1;
-    r->index_data[r->index_count++] = base_index + 2;
+    r->index_data[r->index_count++] = base_index + 3;
 
     //Second triangle
-    r->index_data[r->index_count++] = base_index + 2;
     r->index_data[r->index_count++] = base_index + 1;
+    r->index_data[r->index_count++] = base_index + 2;
     r->index_data[r->index_count++] = base_index + 3;
 }
 
