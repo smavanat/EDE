@@ -105,6 +105,8 @@ int main(int argc, char** argv) {
                 world_update(w, 0);
                 render_end_frame(gRenderer);
                 render_draw_point(dRenderer, (vector2){-1.0f, -1.0f}, (vector4){0.0f, 0.0f, 1.0f, 1.0f});
+                render_draw_line(dRenderer, (vector2){-1.0f, 1.0f}, (vector2){-0.5, 0.5}, (vector4){1.0f, 0.0f, 0.0f, 1.0f});
+                render_draw_quad(dRenderer, &(quad){0.0f, 1.0f, 0.5f, 0.5f}, (vector4){1.0f, 0.0f, 0.0f, 1.0f}, 0);
                 debug_render_flush(dRenderer);
 
                 //check and call events and swap the buffers

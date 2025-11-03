@@ -250,10 +250,17 @@ void debug_render_flush(debug_renderer *r) {
     glDrawArrays(GL_LINES, 0, r->line_count);
 
     //Drawing quads:
-    glBufferSubData(GL_ARRAY_BUFFER, 0, r->quad_count* sizeof(debug_render_vertex), r->quads);
+    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    // glBufferSubData(GL_ARRAY_BUFFER, 0, r->quad_count* sizeof(debug_render_vertex), r->quads);
+    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, r->ebo);
+    // glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, r->index_count * sizeof(uint32_t), r->index_data);
+    // glDrawElements(GL_TRIANGLES, r->index_count, GL_UNSIGNED_INT, 0);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, r->quad_count * sizeof(debug_render_vertex), r->quads);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, r->ebo);
-    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, r->index_count * sizeof(uint32_t), r->index_data); //Copies the quad data into the vbo
-    glDrawArrays(GL_LINES, 0, r->quad_count);
+    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, r->index_count * sizeof(uint32_t), r->index_data);
+
+    // Draw the edges only
+    glDrawElements(GL_LINES, r->index_count, GL_UNSIGNED_INT, 0);   // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     //Need to reset the counts to flush the data out
     r->vertex_count = 0;
@@ -272,21 +279,18 @@ void render_draw_quad(debug_renderer *r, quad *dimensions, vector4 colour, int w
     }
     uint32_t base_index = r->quad_count;
 
-    r->points[r->quad_count++] = (debug_render_vertex){(vector2){dimensions->x+dimensions->w, dimensions->y}, colour};
-    r->points[r->quad_count++] = (debug_render_vertex){(vector2){dimensions->x, dimensions->y}, colour};
-    r->points[r->quad_count++] = (debug_render_vertex){(vector2){dimensions->x, dimensions->y+dimensions->h}, colour};
-    r->points[r->quad_count++] = (debug_render_vertex){(vector2){dimensions->x+dimensions->w, dimensions->y+dimensions->h}, colour};
+    r->quads[r->quad_count++] = (debug_render_vertex){{dimensions->x + dimensions->w, dimensions->y - dimensions->h}, colour}; // bottom-right
+    r->quads[r->quad_count++] = (debug_render_vertex){{dimensions->x, dimensions->y - dimensions->h}, colour}; // bottom-left
+    r->quads[r->quad_count++] = (debug_render_vertex){{dimensions->x, dimensions->y},     colour}; // top-left
+    r->quads[r->quad_count++] = (debug_render_vertex){{dimensions->x + dimensions->w, dimensions->y},     colour}; // top-right
 
     //Need to also add ebo data so we can remove overlapping vertices
-    //First triangle
-    r->index_data[r->index_count++] = base_index;
-    r->index_data[r->index_count++] = base_index + 1;
-    r->index_data[r->index_count++] = base_index + 3;
-
-    //Second triangle
-    r->index_data[r->index_count++] = base_index + 1;
-    r->index_data[r->index_count++] = base_index + 2;
-    r->index_data[r->index_count++] = base_index + 3;
+    //Unfortunately have to draw debug quads as 4 lines otherwise we get an ugly diagonal line in the middle because they're actually two quads
+    // Assume `base_index` is the first vertex of this quad in r->quads
+    r->index_data[r->index_count++] = base_index + 0; r->index_data[r->index_count++] = base_index + 1; // top edge
+    r->index_data[r->index_count++] = base_index + 1; r->index_data[r->index_count++] = base_index + 2; // left edge
+    r->index_data[r->index_count++] = base_index + 2; r->index_data[r->index_count++] = base_index + 3; // bottom edge
+    r->index_data[r->index_count++] = base_index + 3; r->index_data[r->index_count++] = base_index + 0; // right edge
 }
 
 //Draws a line between two points
@@ -296,13 +300,13 @@ void render_draw_line(debug_renderer*r, vector2 start, vector2 end, vector4 colo
         return;
     }
 
-    r->points[r->vertex_count++] = (debug_render_vertex){start, colour};
-    r->points[r->vertex_count++] = (debug_render_vertex){end, colour};
+    r->lines[r->line_count++] = (debug_render_vertex){start, colour};
+    r->lines[r->line_count++] = (debug_render_vertex){end, colour};
 }
 
 //Draws a point
 void render_draw_point(debug_renderer *r, vector2 position, vector4 colour) {
-    if(r->vertex_count + 2 >= MAX_POINTS) {
+    if(r->vertex_count + 1 >= MAX_POINTS) {
         printf("Max amount of vertices reached for this frame");
         return;
     }

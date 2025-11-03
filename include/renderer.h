@@ -85,7 +85,7 @@ typedef struct {
     debug_render_vertex points[MAX_POINTS];
     debug_render_vertex lines[MAX_POINTS*2];
     debug_render_vertex quads[MAX_POINTS*4];
-    uint32_t index_data[MAX_POINTS * 6];
+    uint32_t index_data[MAX_POINTS * 8];
 } debug_renderer;
 
 //Allocate the renderer and assign its variables
