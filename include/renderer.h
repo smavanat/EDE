@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "../include/shader.h"
 #include "../include/maths.h"
+#include "../externals/cglm/cglm.h"
 
 //Code adapted from this video: https://www.youtube.com/watch?v=NPnQF4yABwg
 
@@ -18,10 +19,14 @@
 #define MAX_INDECIES MAX_QUADS * INDECIES_PER_QUAD + MAX_TRIANGLES * INDECIES_PER_TRIANGLE
 #define MAX_TEXTURES 32
 #define INVALID_TEX_INDEX 1248
+
 #define MAX_POINTS 2048
 #define MAX_DEBUG_VERTICES MAX_POINTS * 2
 #define MAX_DEBUG_INDECIES MAX_POINTS * 16
 #define CIRCLE_LINE_SEGEMENTS 64 //Number of line segments that make up the circumference of a circle
+
+#define SCREEN_WIDTH 800
+#define SCREEN_HEIGHT 600
 
 //Data structure to hold data about a single render vertex
 typedef struct {
@@ -43,6 +48,7 @@ typedef struct {
     uint32_t vbo;
     uint32_t ebo;
     shader shader;
+    mat4 projection;
 
     render_vertex vertex_data[MAX_VERTICES];
     uint32_t index_data[MAX_INDECIES];
@@ -79,6 +85,7 @@ typedef struct {
     uint32_t vbo;
     uint32_t ebo;
     shader shader;
+    mat4 projection;
 
     size_t point_count;
     size_t vertex_count;

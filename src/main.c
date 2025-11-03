@@ -2,9 +2,7 @@
 #include "../externals/GLFW/glfw3.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "../include/shader.h"
 #include "../include/stb_image.h"
-#include "../externals/cglm/cglm.h"
 #include "../include/basic_systems.h"
 #include "../include/world.h"
 #include "../include/renderer.h"
@@ -17,6 +15,14 @@ debug_renderer *dRenderer;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
+
+    glm_ortho(0.0f, width, height, 0.0f, -1.0f, 1.0f, gRenderer->projection);
+    int proj_loc = glGetUniformLocation(gRenderer->shader, "uProjection");
+    glUniformMatrix4fv(proj_loc, 1, GL_FALSE, (float *)gRenderer->projection);
+
+    glm_ortho(0.0f, width, height, 0.0f, -1.0f, 1.0f, dRenderer->projection);
+    proj_loc = glGetUniformLocation(dRenderer->shader, "uProjection");
+    glUniformMatrix4fv(proj_loc, 1, GL_FALSE, (float *)dRenderer->projection);
 }
 
 void process_input(GLFWwindow* window) {
@@ -32,7 +38,7 @@ int init(GLFWwindow **window) {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     // glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); //For MacOS
 
-    *window = glfwCreateWindow(800, 600, "Learn OpenGL", NULL, NULL);
+    *window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Learn OpenGL", NULL, NULL);
     if(window == NULL) {
         printf("Failed to create GLFW window");
         glfwTerminate();
@@ -47,14 +53,14 @@ int init(GLFWwindow **window) {
     }
 
     gRenderer = malloc(sizeof(renderer));
-    render_init(gRenderer, "../data/shaders/shader.vs", "../data/shaders/shader.fs");
+    render_init(gRenderer, "../data/shaders/shader.vert", "../data/shaders/shader.frag");
     if(!gRenderer){
         printf("Failed to initialise the renderer\n");
         return 0;
     }
 
     dRenderer = malloc(sizeof(debug_renderer));
-    debug_render_init(dRenderer, "../data/shaders/debug_shader.vs", "../data/shaders/debug_shader.fs");
+    debug_render_init(dRenderer, "../data/shaders/debug_shader.vert", "../data/shaders/debug_shader.frag");
     if(!dRenderer){
         printf("Failed to initialise the debug renderer\n");
         return 0;
@@ -77,10 +83,8 @@ int load(void) {
     sprite *spr = malloc(sizeof(sprite));
     spr->texture = render_texture_load("../data/assets/container.jpg");
     memcpy(spr->colours, (vector4[4]){{1.0f, 0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 0.0f, 0.0f}}, sizeof(spr->colours));
-    memcpy(spr->coords, (vector2[4]){{0.5f, 0.5f}, {0.5f, -0.5f}, {-0.5f, -0.5f}, {-0.5f, 0.5f}}, sizeof(spr->coords));
+    memcpy(spr->coords, (vector2[4]){{0.75f * SCREEN_WIDTH, 0.75f * SCREEN_HEIGHT}, {0.75f * SCREEN_WIDTH, 0.25f * SCREEN_HEIGHT}, {0.25f * SCREEN_WIDTH, 0.25f * SCREEN_HEIGHT}, {0.25f * SCREEN_WIDTH, 0.75f * SCREEN_HEIGHT}}, sizeof(spr->coords));
     memcpy(spr->uv, (vector2[4]){{1.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 1.0f}}, sizeof(spr->uv));
-    // uncomment this call to draw in wireframe polygons.
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     add_component_to_entity(w->p, e, SPRITE, spr);
     sys_query(w);
@@ -105,9 +109,9 @@ int main(int argc, char** argv) {
                 world_update(w, 0);
                 render_end_frame(gRenderer);
                 render_draw_point(dRenderer, (vector2){-1.0f, -1.0f}, (vector4){0.0f, 0.0f, 1.0f, 1.0f});
-                render_draw_line(dRenderer, (vector2){-1.0f, 1.0f}, (vector2){-0.5, 0.5}, (vector4){1.0f, 0.0f, 0.0f, 1.0f});
-                render_draw_quad(dRenderer, &(quad){0.0f, 1.0f, 0.5f, 0.5f}, (vector4){1.0f, 0.0f, 0.0f, 1.0f});
-                render_draw_circle(dRenderer, (vector2){-0.5, -0.5}, 0.2f, (vector4){1.0f, 0.0f, 0.0f, 1.0f});
+                render_draw_line(dRenderer, (vector2){0.0f, 0.0f}, (vector2){100.0, 100.0}, (vector4){1.0f, 0.0f, 0.0f, 1.0f});
+                render_draw_quad(dRenderer, &(quad){10.0f, 10.0f, 100.0f, 100.0f}, (vector4){1.0f, 0.0f, 0.0f, 1.0f});
+                render_draw_circle(dRenderer, (vector2){50.0f, 50.0f}, 20.0f, (vector4){1.0f, 0.0f, 0.0f, 1.0f});
                 debug_render_flush(dRenderer);
 
                 //check and call events and swap the buffers
