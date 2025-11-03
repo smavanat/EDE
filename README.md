@@ -27,7 +27,7 @@ make
 The following is a list of features that I plan to add/have added to this project
 ### Implemented  
 Basic ECS  
-Rendering System  
+Rendering System including a debug renderer to draw primitives (points, lines, quads and circles)  
 Shader Loading  
 Synchronous Events (Observer Pattern and Publisher-Subscriber Pattern)  
 ### Planned  
