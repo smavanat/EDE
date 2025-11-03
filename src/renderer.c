@@ -250,11 +250,6 @@ void debug_render_flush(debug_renderer *r) {
     glDrawArrays(GL_LINES, 0, r->line_count);
 
     //Drawing quads:
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    // glBufferSubData(GL_ARRAY_BUFFER, 0, r->quad_count* sizeof(debug_render_vertex), r->quads);
-    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, r->ebo);
-    // glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, r->index_count * sizeof(uint32_t), r->index_data);
-    // glDrawElements(GL_TRIANGLES, r->index_count, GL_UNSIGNED_INT, 0);
     glBufferSubData(GL_ARRAY_BUFFER, 0, r->quad_count * sizeof(debug_render_vertex), r->quads);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, r->ebo);
     glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, r->index_count * sizeof(uint32_t), r->index_data);
