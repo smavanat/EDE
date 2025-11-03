@@ -19,6 +19,8 @@
 #define MAX_TEXTURES 32
 #define INVALID_TEX_INDEX 1248
 #define MAX_POINTS 2048
+#define MAX_DEBUG_VERTICES MAX_POINTS * 2
+#define MAX_DEBUG_INDECIES MAX_POINTS * 16
 #define CIRCLE_LINE_SEGEMENTS 64 //Number of line segments that make up the circumference of a circle
 
 //Data structure to hold data about a single render vertex
@@ -78,19 +80,13 @@ typedef struct {
     uint32_t ebo;
     shader shader;
 
+    size_t point_count;
     size_t vertex_count;
-    size_t line_count;
-    size_t quad_count;
     size_t index_count;
-    size_t circle_count;
-    size_t circle_index_count;
 
     debug_render_vertex points[MAX_POINTS];
-    debug_render_vertex lines[MAX_POINTS*2];
-    debug_render_vertex quads[MAX_POINTS*4];
-    debug_render_vertex circles[MAX_POINTS];
-    uint32_t quad_index_data[MAX_POINTS * 8];
-    uint32_t circle_index_data[MAX_POINTS * 2];
+    debug_render_vertex vertices[MAX_DEBUG_VERTICES];
+    uint32_t index_data[MAX_DEBUG_INDECIES];
 } debug_renderer;
 
 //Allocate the renderer and assign its variables

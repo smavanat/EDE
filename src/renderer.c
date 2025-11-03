@@ -222,10 +222,11 @@ void debug_render_init(debug_renderer *r, char *vertPath, char *fragPath) {
     //Getting the shader for this renderer
     r->shader = load_shader(vertPath, fragPath);
 
+    r->point_count = 0;
     r->vertex_count = 0;
-    r->quad_count = 0;
+    // r->quad_count = 0;
     r->index_count = 0;
-    r->line_count = 0;
+    // r->line_count = 0;
     glPointSize(10.0f);
 }
 
@@ -244,67 +245,59 @@ void debug_render_flush(debug_renderer *r) {
     glBindBuffer(GL_ARRAY_BUFFER, r->vbo);
 
     //Drawing points:
-    glBufferSubData(GL_ARRAY_BUFFER, 0, r->vertex_count * sizeof(debug_render_vertex), r->points);
-    glDrawArrays(GL_POINTS, 0, r->vertex_count);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, r->point_count * sizeof(debug_render_vertex), r->points);
+    glDrawArrays(GL_POINTS, 0, r->point_count);
 
-    //Drawing lines:
-    glBufferSubData(GL_ARRAY_BUFFER, 0, r->line_count * sizeof(debug_render_vertex), r->lines);
-    glDrawArrays(GL_LINES, 0, r->line_count);
-
-    //Drawing quads:
-    glBufferSubData(GL_ARRAY_BUFFER, 0, r->quad_count * sizeof(debug_render_vertex), r->quads);
+    //Drawing everything else:
+    glBufferSubData(GL_ARRAY_BUFFER, 0, r->vertex_count * sizeof(debug_render_vertex), r->vertices);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, r->ebo);
-    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, r->index_count * sizeof(uint32_t), r->quad_index_data);
-    glDrawElements(GL_LINES, r->index_count, GL_UNSIGNED_INT, 0); // Draw the edges only
+    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, r->index_count * sizeof(uint32_t), r->index_data);
+    glDrawElements(GL_LINES, r->index_count, GL_UNSIGNED_INT, 0);
 
-    //Drawing Circles:
-    glBufferSubData(GL_ARRAY_BUFFER, 0, r->circle_count * sizeof(debug_render_vertex), r->circles);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, r->ebo);
-    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, r->circle_index_count * sizeof(uint32_t), r->circle_index_data);
-    glDrawElements(GL_LINES, r->circle_index_count, GL_UNSIGNED_INT, 0);
 
     //Need to reset the counts to flush the data out
+    r->point_count = 0;
     r->vertex_count = 0;
-    r->quad_count = 0;
     r->index_count = 0;
-    r->line_count = 0;
-    r->circle_index_count = 0;
-    r->circle_count = 0;
 }
 
 //NOTE: For now, there is just a hard limit on the number of objects that can be renderered by the debug renderer perframe. Will change this as necessary
 
 //Renders a quad on the screen
 void render_draw_quad(debug_renderer *r, quad *dimensions, vector4 colour) {
-    if(r->quad_count + 4 >= MAX_POINTS *4) {
+    if(r->vertex_count+ 4 >= MAX_DEBUG_VERTICES) {
         printf("Max amount of quads reached for this frame");
         return;
     }
-    uint32_t base_index = r->quad_count;
+    uint32_t base_index = r->vertex_count;
 
-    r->quads[r->quad_count++] = (debug_render_vertex){{dimensions->x + dimensions->w, dimensions->y - dimensions->h}, colour}; // bottom-right
-    r->quads[r->quad_count++] = (debug_render_vertex){{dimensions->x, dimensions->y - dimensions->h}, colour}; // bottom-left
-    r->quads[r->quad_count++] = (debug_render_vertex){{dimensions->x, dimensions->y},     colour}; // top-left
-    r->quads[r->quad_count++] = (debug_render_vertex){{dimensions->x + dimensions->w, dimensions->y},     colour}; // top-right
+    r->vertices[r->vertex_count++] = (debug_render_vertex){{dimensions->x + dimensions->w, dimensions->y - dimensions->h}, colour}; // bottom-right
+    r->vertices[r->vertex_count++] = (debug_render_vertex){{dimensions->x, dimensions->y - dimensions->h}, colour}; // bottom-left
+    r->vertices[r->vertex_count++] = (debug_render_vertex){{dimensions->x, dimensions->y},     colour}; // top-left
+    r->vertices[r->vertex_count++] = (debug_render_vertex){{dimensions->x + dimensions->w, dimensions->y},     colour}; // top-right
 
     //Need to also add ebo data so we can remove overlapping vertices
     //Unfortunately have to draw debug quads as 4 lines otherwise we get an ugly diagonal line in the middle because they're actually two quads
     // Assume `base_index` is the first vertex of this quad in r->quads
-    r->quad_index_data[r->index_count++] = base_index + 0; r->quad_index_data[r->index_count++] = base_index + 1; // top edge
-    r->quad_index_data[r->index_count++] = base_index + 1; r->quad_index_data[r->index_count++] = base_index + 2; // left edge
-    r->quad_index_data[r->index_count++] = base_index + 2; r->quad_index_data[r->index_count++] = base_index + 3; // bottom edge
-    r->quad_index_data[r->index_count++] = base_index + 3; r->quad_index_data[r->index_count++] = base_index + 0; // right edge
+    r->index_data[r->index_count++] = base_index + 0; r->index_data[r->index_count++] = base_index + 1; // top edge
+    r->index_data[r->index_count++] = base_index + 1; r->index_data[r->index_count++] = base_index + 2; // left edge
+    r->index_data[r->index_count++] = base_index + 2; r->index_data[r->index_count++] = base_index + 3; // bottom edge
+    r->index_data[r->index_count++] = base_index + 3; r->index_data[r->index_count++] = base_index + 0; // right edge
 }
 
 //Draws a line between two points
 void render_draw_line(debug_renderer*r, vector2 start, vector2 end, vector4 colour) {
-    if(r->line_count + 2 >= MAX_POINTS *2) {
+    if(r->vertex_count + 2 >= MAX_DEBUG_VERTICES) {
         printf("Max amount of lines reached for this frame");
         return;
     }
 
-    r->lines[r->line_count++] = (debug_render_vertex){start, colour};
-    r->lines[r->line_count++] = (debug_render_vertex){end, colour};
+    uint32_t base = r->vertex_count;
+    r->vertices[r->vertex_count++] = (debug_render_vertex){start, colour};
+    r->vertices[r->vertex_count++] = (debug_render_vertex){end, colour};
+
+    r->index_data[r->index_count++] = base;
+    r->index_data[r->index_count++] = base+1;
 }
 
 //Draws a point
@@ -318,21 +311,26 @@ void render_draw_point(debug_renderer *r, vector2 position, vector4 colour) {
 
 //Draws a circle
 void render_draw_circle(debug_renderer* r, vector2 center, float radius, vector4 colour) {
+    if(r->vertex_count + CIRCLE_LINE_SEGEMENTS >= MAX_DEBUG_VERTICES) {
+        printf("Max amount of circles reached for this frame");
+        return;
+    }
+
     float angle_step = 2.0f * M_PI / CIRCLE_LINE_SEGEMENTS;
     float aspect = 800.0f/ 600.0f; //Temporary. Need to write a projection matrix to fix weird stretching bugs
 
-    uint32_t base_index = r->circle_count;
+    uint32_t base_index = r->vertex_count;
     for(int i = 0; i < CIRCLE_LINE_SEGEMENTS; i++) {
         float angle = i * angle_step;
         float x = center.x + cosf(angle) * radius * (1.0f /aspect);
         float y = center.y + sinf(angle) * radius;
-        r->circles[r->circle_count++] = (debug_render_vertex){(vector2){x, y}, colour};
+        r->vertices[r->vertex_count++] = (debug_render_vertex){(vector2){x, y}, colour};
     }
 
     for(int i = 0; i < CIRCLE_LINE_SEGEMENTS; i++) {
-        r->circle_index_data[r->circle_index_count + (i*2)] = base_index + i;
-        r->circle_index_data[r->circle_index_count + (i*2) + 1] = base_index + (i+1) % CIRCLE_LINE_SEGEMENTS;
+        r->index_data[r->index_count + (i*2)] = base_index + i;
+        r->index_data[r->index_count + (i*2) + 1] = base_index + ((i+1) % CIRCLE_LINE_SEGEMENTS);
     }
 
-    r->circle_index_count += CIRCLE_LINE_SEGEMENTS * 2;
+    r->index_count += CIRCLE_LINE_SEGEMENTS * 2;
 }
