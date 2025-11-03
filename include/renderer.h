@@ -19,6 +19,7 @@
 #define MAX_TEXTURES 32
 #define INVALID_TEX_INDEX 1248
 #define MAX_POINTS 2048
+#define CIRCLE_LINE_SEGEMENTS 64 //Number of line segments that make up the circumference of a circle
 
 //Data structure to hold data about a single render vertex
 typedef struct {
@@ -81,11 +82,15 @@ typedef struct {
     size_t line_count;
     size_t quad_count;
     size_t index_count;
+    size_t circle_count;
+    size_t circle_index_count;
 
     debug_render_vertex points[MAX_POINTS];
     debug_render_vertex lines[MAX_POINTS*2];
     debug_render_vertex quads[MAX_POINTS*4];
-    uint32_t index_data[MAX_POINTS * 8];
+    debug_render_vertex circles[MAX_POINTS];
+    uint32_t quad_index_data[MAX_POINTS * 8];
+    uint32_t circle_index_data[MAX_POINTS * 2];
 } debug_renderer;
 
 //Allocate the renderer and assign its variables
@@ -95,12 +100,12 @@ void debug_render_free(debug_renderer *r);
 //Begin a single render frame (this is equivalent to a gpu render call)
 void debug_render_flush(debug_renderer *r);
 //Renders a quad on the screen
-void render_draw_quad(debug_renderer *r, quad *dimensions, vector4 colour, int wireframe);
+void render_draw_quad(debug_renderer *r, quad *dimensions, vector4 colour);
 //Draws a line between two points
 void render_draw_line(debug_renderer*r, vector2 start, vector2 end, vector4 colour);
 //Draws a point
 void render_draw_point(debug_renderer *r, vector2 position, vector4 colour);
 //Draws a circle
-void render_draw_circle(debug_renderer* r, vector2 center, float radius, vector4 colour, int wireframe);
+void render_draw_circle(debug_renderer* r, vector2 center, float radius, vector4 colour);
 
 #endif

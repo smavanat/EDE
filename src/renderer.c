@@ -4,6 +4,8 @@
 #include <sys/types.h>
 #include"../include/stb_image.h"
 
+//TODO:Need to write a projection matrix to fix weird stretching bugs due to aspect ratio of screen
+
 //Allocate the renderer and assign its variables
 void render_init(renderer *r, char *vertPath, char *fragPath) {
     // r = malloc(sizeof(renderer)); //Allocating the memory for the renderer
@@ -252,22 +254,28 @@ void debug_render_flush(debug_renderer *r) {
     //Drawing quads:
     glBufferSubData(GL_ARRAY_BUFFER, 0, r->quad_count * sizeof(debug_render_vertex), r->quads);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, r->ebo);
-    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, r->index_count * sizeof(uint32_t), r->index_data);
+    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, r->index_count * sizeof(uint32_t), r->quad_index_data);
+    glDrawElements(GL_LINES, r->index_count, GL_UNSIGNED_INT, 0); // Draw the edges only
 
-    // Draw the edges only
-    glDrawElements(GL_LINES, r->index_count, GL_UNSIGNED_INT, 0);   // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    //Drawing Circles:
+    glBufferSubData(GL_ARRAY_BUFFER, 0, r->circle_count * sizeof(debug_render_vertex), r->circles);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, r->ebo);
+    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, r->circle_index_count * sizeof(uint32_t), r->circle_index_data);
+    glDrawElements(GL_LINES, r->circle_index_count, GL_UNSIGNED_INT, 0);
 
     //Need to reset the counts to flush the data out
     r->vertex_count = 0;
     r->quad_count = 0;
     r->index_count = 0;
     r->line_count = 0;
+    r->circle_index_count = 0;
+    r->circle_count = 0;
 }
 
 //NOTE: For now, there is just a hard limit on the number of objects that can be renderered by the debug renderer perframe. Will change this as necessary
 
 //Renders a quad on the screen
-void render_draw_quad(debug_renderer *r, quad *dimensions, vector4 colour, int wireframe) {
+void render_draw_quad(debug_renderer *r, quad *dimensions, vector4 colour) {
     if(r->quad_count + 4 >= MAX_POINTS *4) {
         printf("Max amount of quads reached for this frame");
         return;
@@ -282,10 +290,10 @@ void render_draw_quad(debug_renderer *r, quad *dimensions, vector4 colour, int w
     //Need to also add ebo data so we can remove overlapping vertices
     //Unfortunately have to draw debug quads as 4 lines otherwise we get an ugly diagonal line in the middle because they're actually two quads
     // Assume `base_index` is the first vertex of this quad in r->quads
-    r->index_data[r->index_count++] = base_index + 0; r->index_data[r->index_count++] = base_index + 1; // top edge
-    r->index_data[r->index_count++] = base_index + 1; r->index_data[r->index_count++] = base_index + 2; // left edge
-    r->index_data[r->index_count++] = base_index + 2; r->index_data[r->index_count++] = base_index + 3; // bottom edge
-    r->index_data[r->index_count++] = base_index + 3; r->index_data[r->index_count++] = base_index + 0; // right edge
+    r->quad_index_data[r->index_count++] = base_index + 0; r->quad_index_data[r->index_count++] = base_index + 1; // top edge
+    r->quad_index_data[r->index_count++] = base_index + 1; r->quad_index_data[r->index_count++] = base_index + 2; // left edge
+    r->quad_index_data[r->index_count++] = base_index + 2; r->quad_index_data[r->index_count++] = base_index + 3; // bottom edge
+    r->quad_index_data[r->index_count++] = base_index + 3; r->quad_index_data[r->index_count++] = base_index + 0; // right edge
 }
 
 //Draws a line between two points
@@ -309,6 +317,22 @@ void render_draw_point(debug_renderer *r, vector2 position, vector4 colour) {
 }
 
 //Draws a circle
-void render_draw_circle(debug_renderer* r, vector2 center, float radius, vector4 colour, int wireframe) {
+void render_draw_circle(debug_renderer* r, vector2 center, float radius, vector4 colour) {
+    float angle_step = 2.0f * M_PI / CIRCLE_LINE_SEGEMENTS;
+    float aspect = 800.0f/ 600.0f; //Temporary. Need to write a projection matrix to fix weird stretching bugs
 
+    uint32_t base_index = r->circle_count;
+    for(int i = 0; i < CIRCLE_LINE_SEGEMENTS; i++) {
+        float angle = i * angle_step;
+        float x = center.x + cosf(angle) * radius * (1.0f /aspect);
+        float y = center.y + sinf(angle) * radius;
+        r->circles[r->circle_count++] = (debug_render_vertex){(vector2){x, y}, colour};
+    }
+
+    for(int i = 0; i < CIRCLE_LINE_SEGEMENTS; i++) {
+        r->circle_index_data[r->circle_index_count + (i*2)] = base_index + i;
+        r->circle_index_data[r->circle_index_count + (i*2) + 1] = base_index + (i+1) % CIRCLE_LINE_SEGEMENTS;
+    }
+
+    r->circle_index_count += CIRCLE_LINE_SEGEMENTS * 2;
 }
