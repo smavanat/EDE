@@ -1,6 +1,8 @@
 #include "../include/renderer.h"
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 #include <sys/types.h>
 #include"../include/stb_image.h"
 
@@ -28,7 +30,7 @@ void render_init(renderer *r, char *vertPath, char *fragPath) {
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(render_vertex), (void *)offsetof(render_vertex, uv)); //UV
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, sizeof(render_vertex), (void *)offsetof(render_vertex, tex_index)); //Texture Index
-    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(3);
 
     //Getting the shader for this renderer
     r->shader = load_shader(vertPath, fragPath);
@@ -58,7 +60,6 @@ void render_free(renderer *r) {
 
 //Resetting the renderer for a new draw call
 void render_begin_frame(renderer *r) {
-    use(r->shader);
     r->vertex_count = 0;
     r->index_count = 0;
     r->texture_count = 0;
@@ -67,6 +68,7 @@ void render_begin_frame(renderer *r) {
 //Renderering the current stored data at the end of a draw call
 void render_end_frame(renderer *r) {
     //Shifting the positions according to the projection matrix
+    use(r->shader);
     int proj_loc = glGetUniformLocation(r->shader, "uProjection");
     glUniformMatrix4fv(proj_loc, 1, GL_FALSE, (float *)r->projection);
 
@@ -175,7 +177,7 @@ uint32_t render_texture_load(char *filepath) {
     glBindTexture(GL_TEXTURE_2D, id); // all upcoming GL_TEXTURE_2D operations now have effect on this texture object
 
     // set the texture wrapping parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // set texture wrapping to GL_REPEAT (default wrapping method)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     // set texture filtering parameters
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -197,6 +199,117 @@ uint32_t render_texture_load(char *filepath) {
     stbi_image_free(data);
     return id;
 }
+
+/**
+ * CODE FOR THE PIXEL RENDERER
+ */
+
+void pixel_render_init(pixel_renderer *r, char *vertPath, char *fragPath) {
+    //Setting up the pbo for the pixel simulations:
+    glGenTextures(1, &r->pixel_tex);
+    glBindTexture(GL_TEXTURE_2D, r->pixel_tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, PIXEL_SCREEN_WIDTH, PIXEL_SCREEN_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glGenBuffers(1, &r->pbo);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, r->pbo);
+    glBufferData(GL_PIXEL_UNPACK_BUFFER, PIXEL_SCREEN_HEIGHT * PIXEL_SCREEN_WIDTH * 4, NULL, GL_STREAM_DRAW);
+    r->pixels = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
+    if(r->pixels) {
+        memset(r->pixels, 0x00, PIXEL_SCREEN_HEIGHT * PIXEL_SCREEN_WIDTH * 4);
+        glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+    }
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+
+    r->shader = load_shader(vertPath, fragPath);
+
+    float quadVertices[] = {
+        // positions                                // texCoords
+        0.0f, 0.0f,  0.0f, 0.0f,                            // top-left
+        0.0f, SCREEN_HEIGHT,  0.0f, 1.0f,             // bottom-left
+        SCREEN_WIDTH, SCREEN_HEIGHT,  1.0f, 1.0f, // bottom-right
+        SCREEN_WIDTH, 0.0f,  1.0f, 0.0f               // top-right
+    };
+    unsigned int indices[] = {
+        0, 1, 2,
+        0, 2, 3
+    };
+
+    glGenVertexArrays(1, &r->vao);
+    glGenBuffers(1, &r->vbo);
+    glGenBuffers(1, &r->ebo);
+
+    glBindVertexArray(r->vao);
+
+    glBindBuffer(GL_ARRAY_BUFFER, r->vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, r->ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    // position attribute
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    // coord attribute
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    //Setting the projection matrix
+    glm_ortho(0.0f, SCREEN_WIDTH, SCREEN_HEIGHT, 0.0f, -1.0f, 1.0f, r->projection);
+}
+
+void pixel_render_free(pixel_renderer *r) {
+    glDeleteBuffers(1, &r->vbo);
+    glDeleteBuffers(1, &r->pbo);
+    glDeleteVertexArrays(1, &r->vao);
+
+    glDeleteProgram(r->shader);
+    glDeleteTextures(1, &r->pixel_tex);
+}
+
+void render_begin_pixel_frame(pixel_renderer *r) {
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, r->pbo); //Binding the pbo
+    glBufferData(GL_PIXEL_UNPACK_BUFFER, PIXEL_SCREEN_HEIGHT * PIXEL_SCREEN_WIDTH * 4, NULL, GL_STREAM_DRAW); //Forcing the gpu to discard any data it is currently using
+    r->pixels = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
+    if(r->pixels) {
+        memset(r->pixels, 0x00, PIXEL_SCREEN_HEIGHT * PIXEL_SCREEN_WIDTH * 4);
+    }
+}
+
+void render_end_pixel_frame(pixel_renderer *r) {
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, r->pbo);
+    glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+
+    glBindTexture(GL_TEXTURE_2D, r->pixel_tex);
+    glTexSubImage2D(GL_TEXTURE_2D, 0,0,0, PIXEL_SCREEN_WIDTH, PIXEL_SCREEN_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+
+    use(r->shader);
+    int proj_loc = glGetUniformLocation(r->shader, "uProjection");
+    glUniformMatrix4fv(proj_loc, 1, GL_FALSE, (float *)r->projection);
+
+    // Bind texture to correct unit and uniform
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, r->pixel_tex);
+    glUniform1i(glGetUniformLocation(r->shader, "screenTexture"), 0);
+    glBindVertexArray(r->vao);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+}
+
+void draw_pixel(pixel_renderer *r, uint32_t position, uint8_t colour[4]) {
+    if(!r->pixels) {
+        printf("Pixel Buffer is NULL!!\n");
+        return;
+    }
+    for(int i = 0; i < 4; i++) {
+        r->pixels[(position*4)+i] = colour[i];
+    }
+}
+
+/*
+ * CODE FOR THE DEBUG RENDERER
+ */
 
 //Allocate the renderer and assign its variables
 void debug_render_init(debug_renderer *r, char *vertPath, char *fragPath) {

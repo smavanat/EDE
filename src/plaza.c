@@ -50,6 +50,12 @@ plaza *init_plaza(void) {
             case TERRAIN:
                 componentSize = sizeof(terrain);
                 break;
+            case PIXEL:
+                componentSize = sizeof(pixel);
+                break;
+            case RIGIDBODY:
+                componentSize = sizeof(rigidbody);
+                break;
         }
         p->componentArrays[i] = initialise_component_array(componentSize);
     }
@@ -197,6 +203,7 @@ void *get_component_from_entity(plaza *p, entity e, component_type t) {
     return get_component(p->componentArrays[t], e);
 }
 
+//Returns an array of all the archetypes that match the given signature
 archetype_array *query_signature(plaza *p, signature s) {
     int count = 0;
     for(int i = 0; i < p->entityArchetypes->size; i++) {

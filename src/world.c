@@ -11,7 +11,7 @@ world *world_alloc(void) {
 }
 
 void world_init(world *w) {
-    for(int i = 0; i < w->systems->size; i ++) {
+    for(int i = 0; i < w->systems->size; i++) {
         ((ecs_system **)w->systems->data)[i]->init_func(w->p, ((ecs_system **)w->systems->data)[i]);
     }
 }
@@ -22,8 +22,9 @@ void world_update(world *w, float dt) {
     }
 }
 
+//Updates all of the systems to have the entities that match their signature
 void sys_query(world *w) {
-    for(int i = 0; i < w->systems->size; i ++) {
-        ((ecs_system **)w->systems->data)[i]->entities = query_signature(w->p, ((ecs_system **)w->systems->data)[i]->signature);
+    for(int i = 0; i < w->systems->size; i++) {
+        ((ecs_system **)w->systems->data)[i]->archetypes = query_signature(w->p, ((ecs_system **)w->systems->data)[i]->signature);
     }
 }

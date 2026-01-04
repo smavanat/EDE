@@ -6,7 +6,7 @@ typedef struct ecs_system ecs_system;
 struct ecs_system{
     void (*init_func)(plaza *p, ecs_system *s);
     void (*update_func)(plaza *p, ecs_system *s, float dt);
-    archetype_array *entities;
+    archetype_array *archetypes;
     signature signature;
 };
 

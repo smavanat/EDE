@@ -2,6 +2,7 @@
 #define __COMPONENT_H__
 #include "maths.h"
 #include <stdbool.h>
+#include <stdint.h>
 #include "shader.h"
 
 #define MAX_COMPONENTS (32)
@@ -16,6 +17,8 @@ typedef enum{
     PATHFINDING,
     TERRAIN,
     BUTTON,
+    RIGIDBODY,
+    PIXEL,
     NUM_COMPONENTS //Used for counting the number of components
 } component_type;
 
@@ -76,5 +79,20 @@ typedef struct {
 typedef struct {
     bool isTerrain;
 } terrain;
+
+//The following components are for implementing the destruction system to be more like the way Noita actually does it, buy having the rigidbody be fully made up of pixels
+
+//An individual pixel
+typedef struct {
+    uint8_t colour[4];
+    uint32_t position;
+} pixel;
+
+//A rigidbody
+typedef struct {
+    uint16_t width;
+    uint16_t height;
+    pixel **pixels;
+} rigidbody;
 
 #endif

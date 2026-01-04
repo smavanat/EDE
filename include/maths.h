@@ -43,6 +43,9 @@ typedef struct {
 #ifdef __cplusplus
 extern "C" {
 #endif
+ivector2 vec_to_ivec(vector2 v);
+vector2 ivec_to_vec(ivector2 v);
+
 //Rotates a vector2 about the z-axis and returns the result. Takes an angle in degrees or in radians, but if 
 //the angle is in degrees, the inRadians parameter must be set to false;
 vector2 rotate(vector2* vec, double angle, bool inRadians);
@@ -58,6 +61,8 @@ bool equals(vector2 a, vector2 b);
 double normalizeAngle(double angle);
 
 void normalise(vector2* v);
+
+int clamp(int val, int min_val, int max_val);
 
 #ifdef __cplusplus
 }

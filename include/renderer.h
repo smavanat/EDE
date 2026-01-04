@@ -28,6 +28,9 @@
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
 
+#define PIXEL_SCREEN_WIDTH 80
+#define PIXEL_SCREEN_HEIGHT 60
+
 //Data structure to hold data about a single render vertex
 typedef struct {
     vector2 pos;
@@ -74,6 +77,26 @@ void render_push_triangle(renderer *r, vector2 coords[3], vector4 colours[3], ve
 void render_push_quad(renderer *r, vector2 coords[4], vector4 colours[4], vector2 uv[4], uint32_t texture);
 //Load a texture
 uint32_t render_texture_load(char *filepath);
+
+typedef struct {
+    uint32_t vao;
+    uint32_t vbo;
+    uint32_t ebo;
+    shader shader;
+    mat4 projection;
+
+    //Stuff for pixel rendering:
+    uint32_t pbo;
+    uint8_t *pixels;
+    uint32_t pixel_tex;
+} pixel_renderer;
+
+void pixel_render_init(pixel_renderer *r, char *vertPath, char *fragPath);
+void pixel_render_free(pixel_renderer *r);
+void render_begin_pixel_frame(pixel_renderer *r);
+void render_end_pixel_frame(pixel_renderer *r);
+void draw_pixel(pixel_renderer *r, uint32_t position, uint8_t colour[4]);
+
 
 typedef struct {
     vector2 position;
