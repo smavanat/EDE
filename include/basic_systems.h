@@ -3,10 +3,13 @@
 #include "component.h"
 #include "renderer.h"
 #include "system.h"
+#include "../externals/GLFW/glfw3.h"
 
 extern renderer *gRenderer;
 extern pixel_renderer *pRenderer;
 extern debug_renderer *dRenderer;
+extern GLFWwindow *gw;
+extern world_grid *grid;
 
 void render_system_init(plaza *p, ecs_system *s);
 void render_system_update(plaza *p, ecs_system *s, float dt);

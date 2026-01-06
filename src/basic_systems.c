@@ -5,6 +5,8 @@
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 /**
 * FUNCTIONS FOR THE RENDERING SYSTEM
@@ -33,53 +35,60 @@ void rigidbody_system_init(plaza *p, ecs_system *s) {
 }
 
 void rigidbody_system_update(plaza *p, ecs_system *s, float dt) {
-    render_begin_pixel_frame(pRenderer);
+    double cursor_x, cursor_y;
+    // glfwGetCursorPos(gw, &cursor_x, &cursor_y);
+    world_grid *new_grid = malloc(sizeof(world_grid));
+    new_grid->height = grid->height;
+    new_grid->width = grid->width;
+    new_grid->pixels = malloc(sizeof(pixel) * new_grid->width * new_grid->height);
+    for(int i = 0; i < grid->height * grid->width; i++) {
+        memcpy(new_grid->pixels[i].colour, (uint8_t[]){0,0,0,0}, sizeof(new_grid->pixels[i].colour));
+        new_grid->pixels[i].parent_body = -1;
+    }
+    // render_begin_pixel_frame(pRenderer);
     for(size_t i = 0; i < s->archetypes->size; i++) {
         for(size_t j = 0; j < get_value(s->archetypes, archetype *, i)->size; j++) {
             rigidbody *rigidbody = get_component_from_entity(p, ((archetype **)s->archetypes->data)[i]->entities[j], RIGIDBODY);
             transform *t = get_component_from_entity(p, ((archetype **)s->archetypes->data)[i]->entities[j], TRANSFORM);
-            // printf("Rigidbody position in rigidbody system: (%f, %f)\n", t->position.x, t->position.y);
 
-            vector2 origin = {t->position.x - rigidbody->width / 2.0f, t->position.y - rigidbody->height / 2.0f};
-            vector2 corners[4] = {
-                {origin.x, origin.y},
-                {origin.x + rigidbody->width, origin.y},
-                {origin.x, origin.y + rigidbody->height},
-                {origin.x + rigidbody->width, origin.y + rigidbody->height}
-            };
-
-            float min_x = FLT_MAX, min_y = FLT_MAX;
-            float max_x = -FLT_MAX, max_y = -FLT_MAX;
-
-            for(int k = 0; k < 4; k++) {
-                vector2 r = rotateAboutPoint(&corners[k], &t->position, t->angle, 1);
-                min_x = fminf(min_x, r.x);
-                min_y = fminf(min_y, r.y);
-                max_x = fmaxf(max_x, r.x);
-                max_y = fmaxf(max_y, r.y);
-            }
-
-            int start_x = (int)floorf(min_x);
-            int end_x   = (int)ceilf (max_x);
-            int start_y = (int)floorf(min_y);
-            int end_y   = (int)ceilf (max_y);
-
-            for (int y = start_y; y <= end_y; y++) {
-                for (int x = start_x; x <= end_x; x++) {
-                    vector2 world_pos = {x, y};
-                    vector2 old_pos = rotateAboutPoint(&world_pos, &t->position, -t->angle, 1);
-                    vector2 old_pos_tex = {old_pos.x - origin.x, old_pos.y - origin.y};
-                    uint8_t colour[4] = {0, 0, 0, 0};
-                    if(old_pos_tex.x >= 0 && old_pos_tex.x < rigidbody->width && old_pos_tex.y >= 0 && old_pos_tex.y < rigidbody->height) {
-                        sample_pixel(old_pos_tex.x, old_pos_tex.y, rigidbody->pixels, rigidbody->width, rigidbody->height, colour);
-                    }
-                    uint32_t screen_pos = world_to_pixel_pos(vec_to_ivec(world_pos), PIXEL_SCREEN_WIDTH);
-                    draw_pixel(pRenderer, screen_pos, colour);
+            for(int p = 0; p < rigidbody->pixel_count; p++) {
+                vector2 old_pos = ivec_to_vec(rigidbody->pixel_coords[p]);
+                vector2 rotated_pos = rotateAboutPoint(&old_pos, &(vector2){0,0}, t->angle, 1);
+                ivector2 new_pos = (ivector2){floor(rotated_pos.x + t->position.x + 0.5), floor(rotated_pos.y + t->position.y + 0.5)};
+                if(new_pos.x < new_grid->width && new_pos.x >= 0 && new_pos.y < new_grid->height && new_pos.y >= 0) {
+                    memcpy(new_grid->pixels[(new_pos.y * new_grid->width) + new_pos.x].colour, rigidbody->colour, sizeof(new_grid->pixels[(new_pos.y * new_grid->width) + new_pos.x].colour));
+                    new_grid->pixels[(new_pos.y * new_grid->width) + new_pos.x].parent_body = ((archetype **)s->archetypes->data)[i]->entities[j];
+                    printf("Parent Body %i\n", new_grid->pixels[(new_pos.y * new_grid->width) + new_pos.x].parent_body);
                 }
             }
         }
     }
-    render_end_pixel_frame(pRenderer);
+
+    glfwGetCursorPos(gw, &cursor_x, &cursor_y);
+    list *rb_list = list_alloc(10, sizeof(ivector2));
+    erasePixels(2, cursor_x * 0.1, cursor_y * 0.1, new_grid, rb_list);
+    for(int i = 0; i < rb_list->size; i++) {
+        uint32_t grid_pos = (get_value(rb_list, ivector2, i).y * new_grid->width) + get_value(rb_list, ivector2, i).x;
+        rigidbody *rb = get_component_from_entity(p, new_grid->pixels[grid_pos].parent_body, RIGIDBODY);
+        transform *t = get_component_from_entity(p, new_grid->pixels[grid_pos].parent_body, TRANSFORM);
+
+        vector2 d = {(get_value(rb_list, ivector2, i).x - t->position.x), (get_value(rb_list, ivector2, i).y - t->position.y)};
+        vector2 rotated_pos = rotateAboutPoint(&d, &(vector2){0,0}, -t->angle, 1);
+        ivector2 rel_pos = (ivector2){(int)floorf(rotated_pos.x + 0.5f), (int)floorf(rotated_pos.y + 0.5f)};
+
+        for(int j = 0; j < rb->pixel_count; j++) {
+            int dx = rb->pixel_coords[j].x - rel_pos.x;
+            int dy = rb->pixel_coords[j].y - rel_pos.y;
+
+            if(abs(dx) <= 1 && abs(dy) <= 1) {
+                rb->pixel_coords[j] = rb->pixel_coords[rb->pixel_count-1];
+                rb->pixel_count--;
+                break;
+            }
+        }
+    }
+    free(grid);
+    grid = new_grid;
 }
 
 /**
@@ -98,7 +107,6 @@ void physics_system_update(plaza *p, ecs_system *s, float dt) {
             vector2 temp = b2Body_GetPosition(c->collider_id);
             t->angle = normalizeAngle(b2Rot_GetAngle(b2Body_GetRotation(c->collider_id)))/DEGREES_TO_RADIANS;
             t->position = (vector2){temp.x*METRES_TO_PIXELS, temp.y * METRES_TO_PIXELS};
-            // printf("Rigidbody position in physics system: (%f, %f)\n", t->position.x, t->position.y);
         }
     }
 }

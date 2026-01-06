@@ -14,6 +14,7 @@
 #include "../include/basic_systems.h"
 #include "../include/world.h"
 #include "../include/renderer.h"
+#include "../include/rigidbody.h"
 
 #define FRAME_RATE 1000 / 60.0f
 
@@ -22,6 +23,8 @@ renderer *gRenderer;
 pixel_renderer *pRenderer;
 debug_renderer *dRenderer;
 b2WorldId world_id;
+GLFWwindow *gw = NULL;
+world_grid *grid = NULL;
 
 //TODO: Need to make the list in the world that holds all the systems a priority queue so we can order the systems properly
 
@@ -130,39 +133,32 @@ int init(GLFWwindow **window) {
 
     world_init(w);
 
+    grid = malloc(sizeof(world_grid));
+    grid->height = PIXEL_SCREEN_HEIGHT;
+    grid->width = PIXEL_SCREEN_WIDTH;
+    grid->pixels = malloc(sizeof(pixel) * grid->height * grid->width);
+    for(int i = 0; i < grid->height * grid->width; i++) {
+        memcpy(grid->pixels[i].colour, (uint8_t[]){0,0,0,0}, sizeof(grid->pixels[i].colour));
+        grid->pixels[i].parent_body = -1;
+    }
+
     return 1;
 }
 
 int load(void) {
     //Creating the entity to store the sprite component
     entity e = create_entity(w->p);
-    sprite *spr = malloc(sizeof(sprite));
-    spr->texture = render_texture_load("../data/assets/container.jpg");
-    memcpy(spr->colours, (vector4[4]){{1.0f, 0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 0.0f, 0.0f}}, sizeof(spr->colours));
-    memcpy(spr->coords, (vector2[4]){{0.75f * SCREEN_WIDTH, 0.75f * SCREEN_HEIGHT}, {0.75f * SCREEN_WIDTH, 0.25f * SCREEN_HEIGHT}, {0.25f * SCREEN_WIDTH, 0.25f * SCREEN_HEIGHT}, {0.25f * SCREEN_WIDTH, 0.75f * SCREEN_HEIGHT}}, sizeof(spr->coords));
-    memcpy(spr->uv, (vector2[4]){{1.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 1.0f}}, sizeof(spr->uv));
-
+    sprite *spr = create_sprite(render_texture_load("../data/assets/container.jpg"),
+                                (vector2[4]){{0.75f * SCREEN_WIDTH, 0.75f * SCREEN_HEIGHT}, {0.75f * SCREEN_WIDTH, 0.25f * SCREEN_HEIGHT}, {0.25f * SCREEN_WIDTH, 0.25f * SCREEN_HEIGHT}, {0.25f * SCREEN_WIDTH, 0.75f * SCREEN_HEIGHT}},
+                                (vector4[4]){{1.0f, 0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 0.0f, 0.0f}},
+                                (vector2[4]){{1.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 1.0f}});
     add_component_to_entity(w->p, e, SPRITE, spr);
 
     entity r = create_entity(w->p);
-    transform *t = malloc(sizeof(transform));
-    t->angle = 0.0f;
-    t->zIndex = 0;
-    t->position = (vector2){10, 10};
+    transform *t = create_transform((vector2){10, 10}, 0, 0);
     add_component_to_entity(w->p, r, TRANSFORM, t);
 
-    rigidbody *rb = malloc(sizeof(rigidbody));
-    rb->height = 5;
-    rb->width = 10;
-    rb->pixels = malloc(sizeof(pixel *) * rb->width * rb->height);
-    for(int i = 0; i < rb->width * rb->height; i++) {
-        rb->pixels[i] = malloc(sizeof(pixel));
-        rb->pixels[i]->position = i;
-        rb->pixels[i]->colour[0] = 0xff;
-        rb->pixels[i]->colour[1] = 0x00;
-        rb->pixels[i]->colour[2] = 0x00;
-        rb->pixels[i]->colour[3] = 0xff;
-    }
+    rigidbody *rb = create_rigidbody(r, 11, 5, (uint8_t[]){0xff, 0x00, 0x00, 0xff}, (ivector2){10, 10}, grid);
     add_component_to_entity(w->p, r, RIGIDBODY, rb);
 
     collider *c = malloc(sizeof(collider));
@@ -171,24 +167,10 @@ int load(void) {
     add_component_to_entity(w->p, r, COLLIDER, c);
 
     entity base = create_entity(w->p);
-    transform *tb = malloc(sizeof(transform));
-    tb->angle = 0.0f;
-    tb->zIndex = 0;
-    tb->position = (vector2){0, 55};
+    transform *tb = create_transform((vector2){0, 55}, 0, 0);
     add_component_to_entity(w->p, base, TRANSFORM, tb);
 
-    rigidbody *rbb = malloc(sizeof(rigidbody));
-    rbb->height = 1;
-    rbb->width = 80;
-    rbb->pixels = malloc(sizeof(pixel *) * rbb->width * rbb->height);
-    for(int i = 0; i < rbb->width * rbb->height; i++) {
-        rbb->pixels[i] = malloc(sizeof(pixel));
-        rbb->pixels[i]->position = i;
-        rbb->pixels[i]->colour[0] = 0x00;
-        rbb->pixels[i]->colour[1] = 0x00;
-        rbb->pixels[i]->colour[2] = 0x00;
-        rbb->pixels[i]->colour[3] = 0xff;
-    }
+    rigidbody *rbb = create_rigidbody(base, 80, 5, (uint8_t[]){0x00, 0x00, 0x00, 0xff}, (ivector2){0, 55}, grid);
     add_component_to_entity(w->p, base, RIGIDBODY, rbb);
 
     collider *cb = malloc(sizeof(collider));
@@ -201,23 +183,28 @@ int load(void) {
 }
 
 int main(int argc, char** argv) {
-    GLFWwindow *window = NULL;
+    // GLFWwindow *window = NULL;
     struct timeval stop, start;
     float dt = 0.0f;
 
-    if(init(&window)) {
+    if(init(&gw)) {
         printf("Initialised\n");
         if(load()) {
             printf("Loaded\n");
             //Render loop
-            while(!glfwWindowShouldClose(window)) {
+            while(!glfwWindowShouldClose(gw)) {
                 gettimeofday(&start, NULL);
                 //input
-                process_input(window);
+                process_input(gw);
 
                 glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
                 glClear(GL_COLOR_BUFFER_BIT);
                 world_update(w, dt);
+                render_begin_pixel_frame(pRenderer);
+                for(int i = 0; i < grid->height * grid->width; i++) {
+                    draw_pixel(pRenderer, i, grid->pixels[i].colour);
+                }
+                render_end_pixel_frame(pRenderer);
                 // render_draw_point(dRenderer, (vector2){-1.0f, -1.0f}, (vector4){0.0f, 0.0f, 1.0f, 1.0f});
                 // render_draw_line(dRenderer, (vector2){0.0f, 0.0f}, (vector2){100.0, 100.0}, (vector4){1.0f, 0.0f, 0.0f, 1.0f});
                 // render_draw_quad(dRenderer, &(quad){10.0f, 10.0f, 100.0f, 100.0f}, (vector4){1.0f, 0.0f, 0.0f, 1.0f});
@@ -226,7 +213,7 @@ int main(int argc, char** argv) {
                 b2World_Step(world_id, 1.0f/60.0f, 4);
 
                 //check and call events and swap the buffers
-                glfwSwapBuffers(window);
+                glfwSwapBuffers(gw);
                 glfwPollEvents();
                 gettimeofday(&stop, NULL);
                 dt = (stop.tv_sec - start.tv_sec) * 1000 + (stop.tv_usec - start.tv_usec) / 1000.0f;

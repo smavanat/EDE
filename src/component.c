@@ -1,4 +1,24 @@
 #include "../include/component.h"
+#include <stdlib.h>
+#include <string.h>
+
+transform *create_transform(vector2 position, float zIndex, float angle) {
+    transform *t = malloc(sizeof(transform));
+    t->angle = angle;
+    t->zIndex = zIndex;
+    t->position = position;
+    return t;
+}
+
+sprite *create_sprite(unsigned int texture, vector2 coords[4], vector4 colours[4], vector2 uv[4]) {
+    sprite *spr = malloc(sizeof(sprite));
+    spr->texture = texture;
+    memcpy(spr->colours, colours, sizeof(spr->colours));
+    memcpy(spr->coords, coords, sizeof(spr->coords));
+    memcpy(spr->uv, uv, sizeof(spr->uv));
+
+    return spr;
+}
 
 b2BodyId createCircleCollider(vector2 center, float radius, b2WorldId worldId, b2BodyType type) {
     //Default shape initialisation code

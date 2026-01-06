@@ -78,10 +78,8 @@ void destroy_entity(plaza *p, entity e) {
 }
 
 void add_component_to_entity(plaza *p, entity e, component_type t, void *c) {
-    printf("Adding component of type %i to entity %i\n", t, e);
     //Removing entity from its old archetype:
     if(p->entitySignatures[e] != 0) {
-        printf("Signature before addition: %i\n", p->entitySignatures[e]);
         for(size_t i = 0; i < p->entityArchetypes->size; i++) {
             if(get_value(p->entityArchetypes, archetype *, i)->signature == p->entitySignatures[e]) {
                 //This is very inefficient. When doing chunking store a sparse set that uses 
@@ -104,7 +102,6 @@ void add_component_to_entity(plaza *p, entity e, component_type t, void *c) {
 
     add_component_runtime(p->componentArrays[t], e, c);
     p->entitySignatures[e] |= (1 << t); //Add a bit to the signature
-    printf("Signature after addition: %i\n", p->entitySignatures[e]);
 
     //Adding an entity to a specific archetype
     bool foundSig = false;

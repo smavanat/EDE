@@ -33,16 +33,18 @@ typedef struct {
     float angle;
 } transform;
 
+transform *create_transform(vector2 position, float zIndex, float angle);
+
 //Needs to be filled in later once OpenGL is setup
 //Holds destructible sprite texture data
 typedef struct {
-    // shader shader;
     unsigned int texture;
     vector2 coords[4];
     vector4 colours[4];
     vector2 uv[4];
-    // unsigned int VAO;
 } sprite;
+
+sprite *create_sprite(unsigned int texture, vector2 coords[4], vector4 colours[4], vector2 uv[4]);
 
 //Needs to be finished once box2D is setup
 //Holds the b2BodyId of a box2D collider alongside what kind of collider it is
@@ -70,14 +72,24 @@ typedef struct {
 //An individual pixel
 typedef struct {
     uint8_t colour[4];
-    uint32_t position;
+    int32_t parent_body; //The parent rigidbody if this pixel has one
 } pixel;
 
 //A rigidbody
 typedef struct {
     uint16_t width;
     uint16_t height;
-    pixel **pixels;
+    uint8_t colour[4];
+    // pixel **pixels;
+    // ivector2 *pixel_coords;
+    ivector2 *pixel_coords;
+    uint32_t pixel_count;
 } rigidbody;
+
+typedef struct {
+    uint16_t width;
+    uint16_t height;
+    pixel *pixels;
+} world_grid;
 
 #endif

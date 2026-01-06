@@ -86,6 +86,8 @@ typedef struct {
     mat4 projection;
 
     //Stuff for pixel rendering:
+    // uint8_t pbo_index;
+    // uint8_t pbo_next_index;
     uint32_t pbo;
     uint8_t *pixels;
     uint32_t pixel_tex;
