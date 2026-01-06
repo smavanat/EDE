@@ -13,6 +13,7 @@ ivector2 pixel_to_world_pos(uint32_t pos, uint32_t width) {
     return (ivector2){pos % width, pos / width};
 }
 
+//Using Bilinear interpolation to sample the pixel colour in a rotated image
 void sample_pixel(float x, float y, pixel **pixel_array, uint32_t width, uint32_t height, uint8_t *ret) {
     int x0 = floor(x);
     int x1 = ceil(x);

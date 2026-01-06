@@ -18,7 +18,7 @@ typedef struct{
 //For grouping entities by their component types;
 typedef struct {
     signature signature;
-    int size;
+    size_t size;
     entity entities[MAX_ENTITIES];
 } archetype;
 

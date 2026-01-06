@@ -3,20 +3,17 @@
 #include "maths.h"
 #include <stdbool.h>
 #include <stdint.h>
-#include "shader.h"
+#include "../externals/box2d/box2d.h"
 
-#define MAX_COMPONENTS (32)
+#define MAX_COMPONENTS 32
+#define METRES_TO_PIXELS 50.0f
+#define PIXELS_TO_METRES 1.0f / METRES_TO_PIXELS
 
 typedef enum{
     TRANSFORM,
     SPRITE,
-    TILE_SPRITE,
     COLLIDER,
-    TAG,
-    TILE_RECT,
     PATHFINDING,
-    TERRAIN,
-    BUTTON,
     RIGIDBODY,
     PIXEL,
     NUM_COMPONENTS //Used for counting the number of components
@@ -47,25 +44,18 @@ typedef struct {
     // unsigned int VAO;
 } sprite;
 
-//Holds indestructible sprite data from a tilemap or a texture atlas.
-typedef struct {
-
-} tile_sprite;
-
 //Needs to be finished once box2D is setup
 //Holds the b2BodyId of a box2D collider alongside what kind of collider it is
 typedef struct {
     collider_type type;
+    b2BodyId collider_id;
 } collider;
 
-//A tag for differentiating entities from eachother
-typedef struct {
-    int tagId;
-} tag;
-
-typedef struct {
-
-} tile_rect;
+b2BodyId createCircleCollider(vector2 center, float radius, b2WorldId worldId, b2BodyType type);
+b2BodyId createBoxCollider(vector2 center, int width, int height, float rotation, b2WorldId worldId, b2BodyType type);
+b2BodyId createCapsuleCollider(vector2 center1, vector2 center2, float rotation, float radius, b2WorldId worldId, b2BodyType type);
+b2BodyId createPolygonCollider(vector2* points, int pointsSize, vector2 center, float rotation, b2WorldId worldId, b2BodyType type);
+vector2 rotateTranslate(vector2* vector, float angle);
 
 //Holds pathfinding data to be used to calculate a viable path between two points which is then re-stored in this component
 typedef struct {
@@ -74,11 +64,6 @@ typedef struct {
     vector2 endPos;
     int size; //The size of the agent that is traversing through this path
 } pathfinding;
-
-//For destructible sprites
-typedef struct {
-    bool isTerrain;
-} terrain;
 
 //The following components are for implementing the destruction system to be more like the way Noita actually does it, buy having the rigidbody be fully made up of pixels
 

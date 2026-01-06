@@ -10,16 +10,17 @@ set(CMAKE_C_STANDARD_REQUIRED True)
 include(FetchContent)
 
 # #Fetch box2D:
-# FetchContent_Declare (
-#     box2d
-#     GIT_REPOSITORY https://github.com/erincatto/box2d.git
-#     GIT_TAG v3.1.0
-# )
-# set(BOX2D_BUILD_UNIT_TESTS OFF CACHE BOOL "" FORCE)
-# set(BOX2D_BUILD_TESTBED OFF CACHE BOOL "" FORCE)
-# set(BOX2D_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+FetchContent_Declare (
+    box2d
+    GIT_REPOSITORY https://github.com/erincatto/box2d.git
+    GIT_TAG v3.1.0
+)
+set(BOX2D_BUILD_WARNINGS OFF CACHE BOOL "" FORCE)
+set(BOX2D_BUILD_UNIT_TESTS OFF CACHE BOOL "" FORCE)
+set(BOX2D_BUILD_TESTBED OFF CACHE BOOL "" FORCE)
+set(BOX2D_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 
-# FetchContent_MakeAvailable(box2d)
+FetchContent_MakeAvailable(box2d)
 
 FetchContent_Declare(
         glfw
@@ -42,7 +43,6 @@ endif()
 
 # Collect all .cpp files in current directory
 file(GLOB C_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
-# file(GLOB CPP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 set(SOURCES ${C_SOURCES})
 
 # Create the executable target
@@ -54,10 +54,10 @@ target_include_directories(ede
         "${CMAKE_SOURCE_DIR}/externals/Include"
 )
 
-# target_link_libraries(ede PRIVATE box2d::box2d)
 target_link_libraries(ede
                         PRIVATE
                         glfw
+                        box2d
                         GL X11 pthread Xi dl m)
 
 # Have to copy all of the assets to the output directory

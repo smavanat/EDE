@@ -302,8 +302,10 @@ void draw_pixel(pixel_renderer *r, uint32_t position, uint8_t colour[4]) {
         printf("Pixel Buffer is NULL!!\n");
         return;
     }
-    for(int i = 0; i < 4; i++) {
-        r->pixels[(position*4)+i] = colour[i];
+    if (position >= 0 && position < PIXEL_SCREEN_HEIGHT * PIXEL_SCREEN_WIDTH) {
+        for(int i = 0; i < 4; i++) {
+            r->pixels[(position*4)+i] = colour[i];
+        }
     }
 }
 

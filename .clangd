@@ -1,0 +1,13 @@
+CompileFlags:
+  Add: [-std=c11]
+  Remove:
+    - -Werror
+    - -Wall
+    - -Wextra
+    - -pedantic
+    - -Wmissing-prototypes
+    - -Wno-unused-value
+Diagnostics:
+  Suppress:
+    - unused-parameter
+    - sign-compare

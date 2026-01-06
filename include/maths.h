@@ -1,18 +1,20 @@
-#pragma once
 #ifndef MATHS_H
 #define MATHS_H
 #include <math.h>
 #include <stdbool.h>
-// #include"externals/Include/box2d/box2d.h"
+#include "../externals/box2d/box2d.h"
 
-extern double DEGREES_TO_RADIANS;
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
-//Could we not just make this a typdef of b2Vec2?
-// typedef b2Vec2 vector2;
-typedef struct {
-    float x;
-    float y;
-} vector2;
+#define DEGREES_TO_RADIANS M_PI / 180
+
+typedef b2Vec2 vector2;
+// typedef struct {
+//     float x;
+//     float y;
+// } vector2;
 
 typedef struct {
     int x;
