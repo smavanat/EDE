@@ -26,6 +26,7 @@ void grow(list *slice, size_t size);
 
 //Macro for removing a value from the list by index. Does not maintain order
 #define remove_at(list, type, pos) do {                                             \
+        if(pos < 0 || pos >= (list->size) || (list)->size == 0) break;              \
         (list)->size--;                                                             \
         ((type*)(list)->data)[pos] = ((type*)(list)->data)[(list)->size];           \
     } while(0);
@@ -42,6 +43,7 @@ void grow(list *slice, size_t size);
 
 //Allocation function
 list *list_alloc(size_t arr_size, size_t t_size);
+void free_list(list *l);
 
 //Not really used but could be useful?
 typedef struct {

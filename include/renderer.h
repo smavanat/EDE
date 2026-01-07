@@ -28,8 +28,9 @@
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
 
-#define PIXEL_SCREEN_WIDTH 80
-#define PIXEL_SCREEN_HEIGHT 60
+#define PIXEL_SIZE 10
+#define PIXEL_SCREEN_WIDTH SCREEN_WIDTH / PIXEL_SIZE
+#define PIXEL_SCREEN_HEIGHT SCREEN_HEIGHT / PIXEL_SIZE
 
 //Data structure to hold data about a single render vertex
 typedef struct {
@@ -128,7 +129,7 @@ void debug_render_free(debug_renderer *r);
 //Begin a single render frame (this is equivalent to a gpu render call)
 void debug_render_flush(debug_renderer *r);
 //Renders a quad on the screen
-void render_draw_quad(debug_renderer *r, quad *dimensions, vector4 colour);
+void render_draw_quad(debug_renderer *r, vector2 *dimensions, vector4 colour);
 //Draws a line between two points
 void render_draw_line(debug_renderer*r, vector2 start, vector2 end, vector4 colour);
 //Draws a point

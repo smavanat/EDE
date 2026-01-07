@@ -71,3 +71,11 @@ int clamp(int val, int min_val, int max_val) {
     }
     return val;
 }
+
+float distance(vector2 *v1, vector2 *v2) {
+
+    float dx, dy;
+    dx = v2->x - v1->x;
+    dy = v2->y - v1->y;
+    return (sqrtf(dx * dx + dy * dy));
+}

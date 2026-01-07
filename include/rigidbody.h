@@ -11,4 +11,5 @@ ivector2 pixel_to_world_pos(uint32_t pos, uint32_t width);
 void sample_pixel(float x, float y, pixel **pixel_array, uint32_t width, uint32_t height, uint8_t *ret);
 rigidbody *create_rigidbody(uint32_t id, uint16_t width, uint16_t height, uint8_t colour[4], ivector2 startpos, world_grid *grid);
 void erasePixels(int radius, int x, int y, world_grid *grid, list *rbs);
+
 #endif

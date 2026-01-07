@@ -66,6 +66,8 @@ void normalise(vector2* v);
 
 int clamp(int val, int min_val, int max_val);
 
+float distance(vector2 *v1, vector2 *v2);
+
 #ifdef __cplusplus
 }
 #endif

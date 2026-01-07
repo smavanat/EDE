@@ -24,6 +24,13 @@ list *list_alloc(size_t arr_size, size_t t_size) {
     return l;
 }
 
+void free_list(list *l) {
+    l->size = 0;
+    l->capacity = 0;
+    free(l->data);
+    free(l);
+}
+
 array* array_init_interal(size_t elem_size, size_t size) {
     array* arr = malloc(sizeof(array));
 

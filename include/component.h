@@ -4,6 +4,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "../externals/box2d/box2d.h"
+#include "renderer.h"
+
+typedef struct {
+    vector2 points[3];
+} triangle_polygon;
 
 #define MAX_COMPONENTS 32
 #define METRES_TO_PIXELS 50.0f
@@ -53,11 +58,12 @@ typedef struct {
     b2BodyId collider_id;
 } collider;
 
-b2BodyId createCircleCollider(vector2 center, float radius, b2WorldId worldId, b2BodyType type);
-b2BodyId createBoxCollider(vector2 center, int width, int height, float rotation, b2WorldId worldId, b2BodyType type);
-b2BodyId createCapsuleCollider(vector2 center1, vector2 center2, float rotation, float radius, b2WorldId worldId, b2BodyType type);
-b2BodyId createPolygonCollider(vector2* points, int pointsSize, vector2 center, float rotation, b2WorldId worldId, b2BodyType type);
-vector2 rotateTranslate(vector2* vector, float angle);
+b2BodyId create_circle_collider(vector2 center, float radius, b2WorldId worldId, b2BodyType type);
+b2BodyId create_box_collider(vector2 center, int width, int height, float rotation, b2WorldId worldId, b2BodyType type);
+b2BodyId create_capsule_collider(vector2 center1, vector2 center2, float rotation, float radius, b2WorldId worldId, b2BodyType type);
+b2BodyId create_polygon_collider(vector2* points, int pointsSize, vector2 center, float rotation, b2WorldId worldId, b2BodyType type);
+vector2 rotate_translate(vector2* vector, float angle);
+void draw_collider(collider *c, debug_renderer *dRenderer, vector4 colour);
 
 //Holds pathfinding data to be used to calculate a viable path between two points which is then re-stored in this component
 typedef struct {

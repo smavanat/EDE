@@ -27,6 +27,9 @@ GLFWwindow *gw = NULL;
 world_grid *grid = NULL;
 
 //TODO: Need to make the list in the world that holds all the systems a priority queue so we can order the systems properly
+//      Need to add collider outline debugging and figure out why the rigidbodies are jerky sometimes
+//      Need to add new collider creation on erasure
+//NOTE: ALL RIGIDBODIES NEED TO HAVE EVEN DIMENSIONS TO ENSURE WE DON'T GET WEIRD HALF-PIXEL OFFSETS
 
 //Thank you Bernardo: https://stackoverflow.com/questions/1157209/is-there-an-alternative-sleep-function-in-c-to-milliseconds
 #ifdef WIN32
@@ -128,8 +131,8 @@ int init(GLFWwindow **window) {
 
     w = world_alloc();
     add_system(w, &render_system_init, &render_system_update); //Creating the render system
+    add_system(w, &physics_system_init, &physics_system_update); //Creating the physics system -> Needs to update before rigidbodies otherwise colliders appear to 'accelerate' ahead of rigidbodies
     add_system(w, &rigidbody_system_init, &rigidbody_system_update); //Creating the rigidbody system
-    add_system(w, &physics_system_init, &physics_system_update); //Creating the physics system
 
     world_init(w);
 
@@ -158,24 +161,24 @@ int load(void) {
     transform *t = create_transform((vector2){10, 10}, 0, 0);
     add_component_to_entity(w->p, r, TRANSFORM, t);
 
-    rigidbody *rb = create_rigidbody(r, 11, 5, (uint8_t[]){0xff, 0x00, 0x00, 0xff}, (ivector2){10, 10}, grid);
+    rigidbody *rb = create_rigidbody(r, 10, 6, (uint8_t[]){0xff, 0x00, 0x00, 0xff}, vec_to_ivec(t->position), grid);
     add_component_to_entity(w->p, r, RIGIDBODY, rb);
 
     collider *c = malloc(sizeof(collider));
     c->type = BOX;
-    c->collider_id = createBoxCollider((vector2){t->position.x + (rb->width * 0.5), t->position.y + (rb->height * 0.5)}, rb->width, rb->height, t->angle, world_id, b2_dynamicBody);
+    c->collider_id = create_box_collider(t->position, rb->width, rb->height, t->angle, world_id, b2_dynamicBody);
     add_component_to_entity(w->p, r, COLLIDER, c);
 
     entity base = create_entity(w->p);
-    transform *tb = create_transform((vector2){0, 55}, 0, 0);
+    transform *tb = create_transform((vector2){40, 57}, 0, 0);
     add_component_to_entity(w->p, base, TRANSFORM, tb);
 
-    rigidbody *rbb = create_rigidbody(base, 80, 5, (uint8_t[]){0x00, 0x00, 0x00, 0xff}, (ivector2){0, 55}, grid);
+    rigidbody *rbb = create_rigidbody(base, 80, 6, (uint8_t[]){0x00, 0x00, 0x00, 0xff}, vec_to_ivec(tb->position), grid);
     add_component_to_entity(w->p, base, RIGIDBODY, rbb);
 
     collider *cb = malloc(sizeof(collider));
     cb->type = BOX;
-    cb->collider_id = createBoxCollider((vector2){tb->position.x + (rbb->width * 0.5), tb->position.y + (rbb->height * 0.5)}, rbb->width, rbb->height, tb->angle, world_id, b2_staticBody);
+    cb->collider_id = create_box_collider(tb->position, rbb->width, rbb->height, tb->angle, world_id, b2_staticBody);
     add_component_to_entity(w->p, base, COLLIDER, cb);
 
     sys_query(w);

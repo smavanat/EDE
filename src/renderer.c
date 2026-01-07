@@ -387,17 +387,21 @@ void debug_render_flush(debug_renderer *r) {
 //NOTE: For now, there is just a hard limit on the number of objects that can be renderered by the debug renderer perframe. Will change this as necessary
 
 //Renders a quad on the screen
-void render_draw_quad(debug_renderer *r, quad *dimensions, vector4 colour) {
+void render_draw_quad(debug_renderer *r, vector2 *dimensions, vector4 colour) {
     if(r->vertex_count+ 4 >= MAX_DEBUG_VERTICES) {
         printf("Max amount of quads reached for this frame");
         return;
     }
     uint32_t base_index = r->vertex_count;
 
-    r->vertices[r->vertex_count++] = (debug_render_vertex){{dimensions->x, dimensions->y}, colour}; // top-left
-    r->vertices[r->vertex_count++] = (debug_render_vertex){{dimensions->x + dimensions->w, dimensions->y}, colour}; // top-right
-    r->vertices[r->vertex_count++] = (debug_render_vertex){{dimensions->x + dimensions->w, dimensions->y + dimensions->h}, colour}; // bottom-right
-    r->vertices[r->vertex_count++] = (debug_render_vertex){{dimensions->x, dimensions->y + dimensions->h}, colour}; // bottom-left
+    for(int i = 0; i < 4; i++) {
+        r->vertices[r->vertex_count++] = (debug_render_vertex){{dimensions[i].x, dimensions[i].y}, colour};
+    }
+
+    // r->vertices[r->vertex_count++] = (debug_render_vertex){{dimensions->x, dimensions->y}, colour}; // top-left
+    // r->vertices[r->vertex_count++] = (debug_render_vertex){{dimensions->x + dimensions->w, dimensions->y}, colour}; // top-right
+    // r->vertices[r->vertex_count++] = (debug_render_vertex){{dimensions->x + dimensions->w, dimensions->y + dimensions->h}, colour}; // bottom-right
+    // r->vertices[r->vertex_count++] = (debug_render_vertex){{dimensions->x, dimensions->y + dimensions->h}, colour}; // bottom-left
 
     //Need to also add ebo data so we can remove overlapping vertices
     //Unfortunately have to draw debug quads as 4 lines otherwise we get an ugly diagonal line in the middle because they're actually two quads

@@ -58,32 +58,32 @@ void rigidbody_system_update(plaza *p, ecs_system *s, float dt) {
                 if(new_pos.x < new_grid->width && new_pos.x >= 0 && new_pos.y < new_grid->height && new_pos.y >= 0) {
                     memcpy(new_grid->pixels[(new_pos.y * new_grid->width) + new_pos.x].colour, rigidbody->colour, sizeof(new_grid->pixels[(new_pos.y * new_grid->width) + new_pos.x].colour));
                     new_grid->pixels[(new_pos.y * new_grid->width) + new_pos.x].parent_body = ((archetype **)s->archetypes->data)[i]->entities[j];
-                    printf("Parent Body %i\n", new_grid->pixels[(new_pos.y * new_grid->width) + new_pos.x].parent_body);
                 }
             }
         }
     }
+    if (glfwGetWindowAttrib(gw, GLFW_FOCUSED)) { //Need to do this otherwise erasure would happen even when the window wasn't open
+        glfwGetCursorPos(gw, &cursor_x, &cursor_y);
+        list *rb_list = list_alloc(10, sizeof(ivector2));
+        erasePixels(2, cursor_x * 0.1, cursor_y * 0.1, new_grid, rb_list);
+        for(int i = 0; i < rb_list->size; i++) {
+            uint32_t grid_pos = (get_value(rb_list, ivector2, i).y * new_grid->width) + get_value(rb_list, ivector2, i).x;
+            rigidbody *rb = get_component_from_entity(p, new_grid->pixels[grid_pos].parent_body, RIGIDBODY);
+            transform *t = get_component_from_entity(p, new_grid->pixels[grid_pos].parent_body, TRANSFORM);
 
-    glfwGetCursorPos(gw, &cursor_x, &cursor_y);
-    list *rb_list = list_alloc(10, sizeof(ivector2));
-    erasePixels(2, cursor_x * 0.1, cursor_y * 0.1, new_grid, rb_list);
-    for(int i = 0; i < rb_list->size; i++) {
-        uint32_t grid_pos = (get_value(rb_list, ivector2, i).y * new_grid->width) + get_value(rb_list, ivector2, i).x;
-        rigidbody *rb = get_component_from_entity(p, new_grid->pixels[grid_pos].parent_body, RIGIDBODY);
-        transform *t = get_component_from_entity(p, new_grid->pixels[grid_pos].parent_body, TRANSFORM);
+            vector2 d = {(get_value(rb_list, ivector2, i).x - t->position.x), (get_value(rb_list, ivector2, i).y - t->position.y)};
+            vector2 rotated_pos = rotateAboutPoint(&d, &(vector2){0,0}, -t->angle, 1);
+            ivector2 rel_pos = (ivector2){(int)floorf(rotated_pos.x + 0.5f), (int)floorf(rotated_pos.y + 0.5f)};
 
-        vector2 d = {(get_value(rb_list, ivector2, i).x - t->position.x), (get_value(rb_list, ivector2, i).y - t->position.y)};
-        vector2 rotated_pos = rotateAboutPoint(&d, &(vector2){0,0}, -t->angle, 1);
-        ivector2 rel_pos = (ivector2){(int)floorf(rotated_pos.x + 0.5f), (int)floorf(rotated_pos.y + 0.5f)};
+            for(int j = 0; j < rb->pixel_count; j++) {
+                int dx = rb->pixel_coords[j].x - rel_pos.x;
+                int dy = rb->pixel_coords[j].y - rel_pos.y;
 
-        for(int j = 0; j < rb->pixel_count; j++) {
-            int dx = rb->pixel_coords[j].x - rel_pos.x;
-            int dy = rb->pixel_coords[j].y - rel_pos.y;
-
-            if(abs(dx) <= 1 && abs(dy) <= 1) {
-                rb->pixel_coords[j] = rb->pixel_coords[rb->pixel_count-1];
-                rb->pixel_count--;
-                break;
+                if(abs(dx) <= 1 && abs(dy) <= 1) {
+                    rb->pixel_coords[j] = rb->pixel_coords[rb->pixel_count-1];
+                    rb->pixel_count--;
+                    break;
+                }
             }
         }
     }
@@ -103,6 +103,7 @@ void physics_system_update(plaza *p, ecs_system *s, float dt) {
         for(size_t j = 0; j < get_value(s->archetypes, archetype *, i)->size; j++) {
             transform *t = get_component_from_entity(p, ((archetype **)s->archetypes->data)[i]->entities[j], TRANSFORM);
             collider *c = get_component_from_entity(p, ((archetype **)s->archetypes->data)[i]->entities[j], COLLIDER);
+            draw_collider(c, dRenderer, (vector4){0.0f, 0.0f, 1.0f, 1.0f});
 
             vector2 temp = b2Body_GetPosition(c->collider_id);
             t->angle = normalizeAngle(b2Rot_GetAngle(b2Body_GetRotation(c->collider_id)))/DEGREES_TO_RADIANS;
