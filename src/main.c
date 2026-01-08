@@ -27,8 +27,8 @@ GLFWwindow *gw = NULL;
 world_grid *grid = NULL;
 
 //TODO: Need to make the list in the world that holds all the systems a priority queue so we can order the systems properly
-//      Need to add collider outline debugging and figure out why the rigidbodies are jerky sometimes
 //      Need to add new collider creation on erasure
+//      Need to add a "free function" to component arrays so that pointers to components are freed properly on destruction to avoid memory leaks -> Currently they are never dealt with
 //NOTE: ALL RIGIDBODIES NEED TO HAVE EVEN DIMENSIONS TO ENSURE WE DON'T GET WEIRD HALF-PIXEL OFFSETS
 
 //Thank you Bernardo: https://stackoverflow.com/questions/1157209/is-there-an-alternative-sleep-function-in-c-to-milliseconds
