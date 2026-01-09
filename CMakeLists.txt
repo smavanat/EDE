@@ -6,6 +6,7 @@ project(Engine LANGUAGES C)
 # set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
+# set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -fsanitize=address)
 
 include(FetchContent)
 

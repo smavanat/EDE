@@ -126,23 +126,35 @@ int get_current_square(ivector2 start_coord, world_grid *grid, int32_t id) {
     int index = (start_coord.y * grid->width) + start_coord.x;
 
     // Top-left pixel
-    if (grid->pixels[index].parent_body == id) result += 1;
+    if (start_coord.x >= 0 && start_coord.x < grid->width && start_coord.y >= 0 && start_coord.y < grid->height && grid->pixels[index].parent_body == id) result += 1;
 
     // Top-right pixel
-    if (start_coord.x + 1 < grid->width && grid->pixels[index + 1].parent_body == id) result += 2;
+    if (start_coord.x + 1 >= 0 && start_coord.x + 1 < grid->width && start_coord.y >= 0 && start_coord.y < grid->height && grid->pixels[index + 1].parent_body == id) result += 2;
 
     // Bottom-left pixel
-    if (start_coord.y + 1 < grid->height && grid->pixels[index + grid->width].parent_body == id) result += 4;
+    if (start_coord.x >= 0 && start_coord.x < grid->width && start_coord.y + 1 >= 0 && start_coord.y + 1 < grid->height && grid->pixels[index + grid->width].parent_body == id) result += 4;
 
     // Bottom-right pixel
-    if (start_coord.x + 1 < grid->width && start_coord.y + 1 < grid->height && grid->pixels[index + grid->width + 1].parent_body == id) result += 8;
+    if (start_coord.x + 1 >= 0 && start_coord.x + 1 < grid->width && start_coord.y + 1 >= 0 && start_coord.y + 1 < grid->height && grid->pixels[index + grid->width + 1].parent_body == id) result += 8;
 
     return result;
 }
 
+ivector2 get_start_point(list* pixel_coords) {
+    ivector2 start = get_value(pixel_coords, ivector2, 0);
+
+    for(int i = 1; i < pixel_coords->size; i++) {
+        ivector2 coord = get_value(pixel_coords, ivector2, i);
+        if(coord.x < start.x || coord.y < start.y) {
+            start = coord;
+        }
+    }
+    return start;
+}
+
 //Actual marching squares method.
 list *marching_squares(list *pixel_coords, world_grid *grid, int32_t id) {
-    ivector2 start_point = get_value(pixel_coords, ivector2, 0);
+    ivector2 start_point = get_start_point(pixel_coords);//get_value(pixel_coords, ivector2, 0);
     list *contour_points = list_alloc(pixel_coords->size, sizeof(ivector2));
     //If the texture is filled on the LHS, we will end up with 15 as our first currentSquare. 
     //To avoid this, we simply offset startPoint one to the left, to get 12 as our currentSquare, 
@@ -260,13 +272,18 @@ void rdp(int startIndex, int endIndex, int epsilon, list *all_points, list* rdp_
 list *bfs(ivector2 start, pixel *grid_coords, int size, int width, int height, int id) {
     list *indecies = list_alloc(size, sizeof(ivector2));
     queue *q = queue_alloc(size, sizeof(ivector2));
+    bool ok;
 
     push_value(indecies, ivector2, start);
     enqueue(q, ivector2, start);
 
     while (q->size > 0) {
         ivector2 current_pixel;
-        deqeue(q, ivector2, current_pixel);
+        dequeue(q, ivector2, current_pixel, ok);
+        if(!ok) break;
+        printf("Current pixel coords: (%i, %i) ", current_pixel.x, current_pixel.y);
+        printf("Index: %i ", ((current_pixel.y) * width) + current_pixel.x);
+        printf("Parent Body: %i\n", grid_coords[((current_pixel.y - 1) * width) + current_pixel.x].parent_body);
         if(current_pixel.y > 0 && grid_coords[((current_pixel.y - 1) * width) + current_pixel.x].parent_body == id) {
             ivector2 new_pos = (ivector2){current_pixel.x, current_pixel.y-1};
             push_value(indecies, ivector2, new_pos);
@@ -299,7 +316,7 @@ list *bfs(ivector2 start, pixel *grid_coords, int size, int width, int height, i
 }
 
 void construct_new_rigidbody(list *pixel_coords, world_grid *grid, uint8_t colour[4], float zIndex, float angle, plaza *p, b2WorldId world_id) {
-    int minX = INT_MAX, maxX = INT_MIN, minY = INT_MIN, maxY = INT_MIN;
+    int minX = INT_MAX, maxX = INT_MIN, minY = INT_MAX, maxY = INT_MIN;
 
     for(int i = 0; i < pixel_coords->size; i++) {
         ivector2 coords = get_value(pixel_coords, ivector2, i);
@@ -321,18 +338,22 @@ void construct_new_rigidbody(list *pixel_coords, world_grid *grid, uint8_t colou
 
     list *ms_points = marching_squares(pixel_coords, grid, e);
     list *rdp_points = list_alloc(ms_points->size, sizeof(ivector2));
-    vector2 *points = malloc(sizeof(vector2) * rdp_points->size);
-    for(int i = 0; i < rdp_points->size; i++) {
-        points[i] = (vector2){get_value(rdp_points, ivector2, i).x, get_value(rdp_points, ivector2, i).y};
+    rdp(0, ms_points->size, 0, ms_points, rdp_points);
+    for(int i = 0; i < ms_points->size; i++) {
+        render_draw_line(dRenderer, (vector2){get_value(ms_points, ivector2, i).x, get_value(ms_points, ivector2, i).y}, (vector2){get_value(ms_points, ivector2, (i+1)%ms_points->size).x, get_value(ms_points, ivector2, (i+1) % ms_points->size).y}, (vector4){0.0f, 1.0f, 0.0f, 1.0f});
     }
-    rdp(0, ms_points->size, 3, ms_points, rdp_points);
-    collider *c = malloc(sizeof(collider));
-    c->type = POLYGON;
-    c->collider_id = create_polygon_collider(points, rdp_points->size, (vector2){minX + (width/2), minY + (height/2)}, t->angle, world_id, b2_dynamicBody);
+    // vector2 *points = malloc(sizeof(vector2) * rdp_points->size);
+    // for(int i = 0; i < rdp_points->size; i++) {
+    //     points[i] = (vector2){get_value(rdp_points, ivector2, i).x, get_value(rdp_points, ivector2, i).y};
+    // }
+    // collider *c = malloc(sizeof(collider));
+    // c->type = POLYGON;
+    // c->collider_id = create_polygon_collider(points, rdp_points->size, (vector2){minX + (width/2), minY + (height/2)}, t->angle, world_id, b2_dynamicBody);
+    // add_component_to_entity(p, e, COLLIDER,  c);
 
     free(ms_points);
     free(rdp_points);
-    free(points);
+    // free(points);
 }
 
 void split_rigidbody(entity id, plaza *p, world_grid *grid, b2WorldId world_id) {

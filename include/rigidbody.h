@@ -5,6 +5,9 @@
 #include "component.h"
 #include "list.h"
 #include "plaza.h"
+#include "renderer.h"
+
+extern debug_renderer *dRenderer;
 
 uint32_t rigidbody_to_pixel_pos(uint32_t pos, uint32_t r_width, uint32_t w_width);
 uint32_t world_to_pixel_pos(ivector2 pos, uint32_t width);

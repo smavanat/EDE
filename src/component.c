@@ -12,6 +12,13 @@ transform *create_transform(vector2 position, float zIndex, float angle) {
     return t;
 }
 
+void free_transform(void *t) {
+    transform *tr = (transform *) t;
+    tr->position = (vector2){0,0};
+    tr->angle = 0;
+    tr->zIndex = 0;
+}
+
 sprite *create_sprite(unsigned int texture, vector2 coords[4], vector4 colours[4], vector2 uv[4]) {
     sprite *spr = malloc(sizeof(sprite));
     spr->texture = texture;
@@ -20,6 +27,11 @@ sprite *create_sprite(unsigned int texture, vector2 coords[4], vector4 colours[4
     memcpy(spr->uv, uv, sizeof(spr->uv));
 
     return spr;
+}
+
+void free_sprite(void *spr) {
+    sprite *s = (sprite *)spr;
+    glDeleteTextures(1, &s->texture);
 }
 
 b2BodyId create_circle_collider(vector2 center, float radius, b2WorldId worldId, b2BodyType type) {
@@ -227,10 +239,6 @@ int Intersects(vector2 *p11, vector2 *p12, vector2 *p21, vector2 *p22) {
 }
 
 int triangulate_opt(vector2 *poly, int n, list *triangles) {
-    // if (!poly->Valid()) {
-    //   return 0;
-    // }
-
     long i, j, k, gap;
     DPState **dpstates = NULL;
     vector2 p1, p2, p3, p4;
@@ -243,7 +251,7 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
 
     dpstates = malloc(sizeof(DPState *)*n);
     for (i = 1; i < n; i++) {
-        dpstates[i] = malloc(sizeof(DPState));
+        dpstates[i] = malloc(sizeof(DPState) * i);
     }
 
     // Initialize states and visibility.
@@ -302,6 +310,7 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
             }
         }
     }
+    printf("n: %i\n", n);
     dpstates[n - 1][0].visible = true;
     dpstates[n - 1][0].weight = 0;
     dpstates[n - 1][0].bestvertex = -1;
@@ -356,31 +365,33 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
     newdiagonal.index1 = 0;
     newdiagonal.index2 = n - 1;
     enqueue(diagonals, Diagonal, newdiagonal);
-    while (!(diagonals->size > 0)) {
-    // diagonal = *(diagonals.begin());
-    // diagonals.pop_front();
-    deqeue(diagonals, Diagonal, diagonal);
-    bestvertex = dpstates[diagonal.index2][diagonal.index1].bestvertex;
-    if (bestvertex == -1) {
-        ret = 0;
-        break;
-    }
-    // triangle.Triangle(poly->GetPoint(diagonal.index1), poly->GetPoint(bestvertex), poly->GetPoint(diagonal.index2));
-    triangle = (triangle_polygon){poly[diagonal.index1], poly[bestvertex], poly[diagonal.index2]};
-    // triangles->push_back(triangle);
-    push_value(triangles, triangle_polygon, triangle);
-    if (bestvertex > (diagonal.index1 + 1)) {
-        newdiagonal.index1 = diagonal.index1;
-        newdiagonal.index2 = bestvertex;
-      // diagonals.push_back(newdiagonal);
-        enqueue(diagonals, Diagonal, newdiagonal);
-    }
-    if (diagonal.index2 > (bestvertex + 1)) {
-        newdiagonal.index1 = bestvertex;
-        newdiagonal.index2 = diagonal.index2;
-        // diagonals.push_back(newdiagonal);
-        enqueue(diagonals, Diagonal, newdiagonal);
-    }
+    bool ok;
+    while (diagonals->size > 0) {
+        // diagonal = *(diagonals.begin());
+        // diagonals.pop_front();
+        dequeue(diagonals, Diagonal, diagonal, ok);
+        if(!ok) break;
+        bestvertex = dpstates[diagonal.index2][diagonal.index1].bestvertex;
+        if (bestvertex == -1) {
+            ret = 0;
+            break;
+        }
+        // triangle.Triangle(poly->GetPoint(diagonal.index1), poly->GetPoint(bestvertex), poly->GetPoint(diagonal.index2));
+        triangle = (triangle_polygon){poly[diagonal.index1], poly[bestvertex], poly[diagonal.index2]};
+        // triangles->push_back(triangle);
+        push_value(triangles, triangle_polygon, triangle);
+        if (bestvertex > (diagonal.index1 + 1)) {
+            newdiagonal.index1 = diagonal.index1;
+            newdiagonal.index2 = bestvertex;
+          // diagonals.push_back(newdiagonal);
+            enqueue(diagonals, Diagonal, newdiagonal);
+        }
+        if (diagonal.index2 > (bestvertex + 1)) {
+            newdiagonal.index1 = bestvertex;
+            newdiagonal.index2 = diagonal.index2;
+            // diagonals.push_back(newdiagonal);
+            enqueue(diagonals, Diagonal, newdiagonal);
+        }
     }
 
     for (i = 1; i < n; i++) {
@@ -393,16 +404,21 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
 }
 
 b2BodyId create_polygon_collider(vector2* points, int pointsSize, vector2 center, float rotation, b2WorldId worldId, b2BodyType type) {
+    for(int i = 0; i < pointsSize; i++) {
+        printf("(%f, %f) ", points[i].x, points[i].y);
+    }
+    printf("\n");
     //Default polygon initialisation
     b2BodyDef retBodyDef = b2DefaultBodyDef();
     retBodyDef.type = type;
     retBodyDef.position = (vector2){center.x * PIXELS_TO_METRES, center.y * PIXELS_TO_METRES};
+    printf("Position: (%f, %f)", retBodyDef.position.x, retBodyDef.position.y);
     retBodyDef.rotation = (b2Rot){(float)cos(rotation), (float)sin(rotation)};
     b2BodyId retId = b2CreateBody(worldId, &retBodyDef);
 
     //I am going to partition the polygon regardless of whether or not the number of vertices is less than 8, because
     //Box2D does some very aggressive oversimplification of the shape outline which I'm not a fan of.
-    //It is better to just put in triangles so it can't mess things up. I am going to use triangulation instead of 
+    //It is better to just put in triangles so it can't mess things up. I am going to use triangulation instead of
     //partitioning to make sure Box2D keeps all of the details, as in higher-vertex convex shapes there is a change
     //simplification could occur, which I want to avoid. This also helps to make sure that the vertices of the sub-polygons is
     //standardised.
@@ -420,15 +436,24 @@ b2BodyId create_polygon_collider(vector2* points, int pointsSize, vector2 center
 
     //Need to set it to be oriented Counter-Clockwise otherwise the triangulation algorithm fails.
     // poly->SetOrientation(TPPL_ORIENTATION_CCW); //This method does not actually check the order of each vertex. Need to change it so it sorts the points properly.
-    // TPPLPartition test = TPPLPartition(); 
+    // TPPLPartition test = TPPLPartition();
     int result = triangulate_opt(points, pointsSize, triangle_list); //Traingulate the polygon shape
+    printf("Result: %i", result);
+    for(int i = 0; i < triangle_list->size; i++) {
+        triangle_polygon t = get_value(triangle_list, triangle_polygon, i);
+        for(int j = 0; j < 3; j++) {
+            printf("(%f, %f) ", t.points[j].x, t.points[j].y);
+        }
+    }
+    printf("\n");
 
     //Trying to center the polygon:
     CenterCompundShape(triangle_list);
 
     //Adding the polygons to the collider, or printing an error message if something goes wrong.
     for (int i = 0; i < triangle_list->size; i++) {
-        b2Hull hull = b2ComputeHull(get_value(triangle_list, triangle_polygon, i).points, 3);
+        vector2 *points = get_value(triangle_list, triangle_polygon, i).points;
+        b2Hull hull = b2ComputeHull(points, 3);
         if (hull.count == 0) {
             printf("Something odd has occured when generating a hull from a polyList\n");
         }
@@ -441,6 +466,11 @@ b2BodyId create_polygon_collider(vector2* points, int pointsSize, vector2 center
     }
     free_list(triangle_list);
     return retId;
+}
+
+void free_collider(void *c) {
+    collider *col = (collider *)c;
+    b2DestroyBody(col->collider_id);
 }
 
 vector2 rotate_translate(vector2* vector, float angle) {
@@ -456,7 +486,6 @@ void draw_collider(collider *c, debug_renderer *dRenderer, vector4 colour) {
     b2ShapeId* colliderShapes = malloc(sizeof(b2ShapeId) * shapeCount);
     b2Body_GetShapes(c->collider_id, colliderShapes, shapeCount);
 
-    printf("New Collider:\n");
     //Need to draw the different collider types differently
     switch(c->type) {
         case BOX:
@@ -466,7 +495,6 @@ void draw_collider(collider *c, debug_renderer *dRenderer, vector4 colour) {
                 for (int k = 0; k < 4; k++) {
                     vector2 temp = rotate_translate(&colliderVertices[k], b2Rot_GetAngle(b2Body_GetRotation(c->collider_id)));
                     rotatedVertices[k] = (vector2){(temp.x + colliderPosition.x) * METRES_TO_PIXELS * PIXEL_SIZE, (temp.y + colliderPosition.y) * PIXEL_SIZE * METRES_TO_PIXELS};
-                    printf("Vertex number %i: (%f, %f)\n", k, rotatedVertices[k].x, rotatedVertices[k].y);
                 }
                 render_draw_quad(dRenderer, rotatedVertices, colour);
                 free(rotatedVertices);
@@ -504,4 +532,9 @@ void draw_collider(collider *c, debug_renderer *dRenderer, vector4 colour) {
             break;
     }
     free(colliderShapes);
+}
+
+void free_rigidbody(void *rb) {
+    rigidbody *r = (rigidbody *)rb;
+    free(r->pixel_coords);
 }

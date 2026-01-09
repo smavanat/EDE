@@ -1,15 +1,16 @@
 #ifndef __WORLD_H__
 #define __WORLD_H__
 #include "plaza.h"
-#include "../include/system.h"
+#include "system.h"
 
 typedef struct {
     plaza *p;
     list *systems; //NEED TO MAKE THIS A PRIORITY QUEUE SO WE CAN ORDER THE WAY IN WHICH SYSTEMS RUN
+    b2WorldId world_id;
 } world;
 
 //Creating the world
-world *world_alloc(void);
+world *world_alloc(b2WorldId world_id);
 //Initialising all the systems stored in the world
 void world_init(world *w);
 //Updating all the systems stored in the world

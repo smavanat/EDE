@@ -129,7 +129,7 @@ int init(GLFWwindow **window) {
     world_def.gravity = (vector2){ 0.0f, 1.0f };
     world_id = b2CreateWorld(&world_def);
 
-    w = world_alloc();
+    w = world_alloc(world_id);
     add_system(w, &render_system_init, &render_system_update); //Creating the render system
     add_system(w, &physics_system_init, &physics_system_update); //Creating the physics system -> Needs to update before rigidbodies otherwise colliders appear to 'accelerate' ahead of rigidbodies
     add_system(w, &rigidbody_system_init, &rigidbody_system_update); //Creating the rigidbody system
@@ -166,7 +166,7 @@ int load(void) {
 
     collider *c = malloc(sizeof(collider));
     c->type = BOX;
-    c->collider_id = create_box_collider(t->position, rb->width, rb->height, t->angle, world_id, b2_dynamicBody);
+    c->collider_id = create_box_collider(t->position, rb->width, rb->height, t->angle, w->world_id, b2_dynamicBody);
     add_component_to_entity(w->p, r, COLLIDER, c);
 
     entity base = create_entity(w->p);
@@ -178,7 +178,7 @@ int load(void) {
 
     collider *cb = malloc(sizeof(collider));
     cb->type = BOX;
-    cb->collider_id = create_box_collider(tb->position, rbb->width, rbb->height, tb->angle, world_id, b2_staticBody);
+    cb->collider_id = create_box_collider(tb->position, rbb->width, rbb->height, tb->angle, w->world_id, b2_staticBody);
     add_component_to_entity(w->p, base, COLLIDER, cb);
 
     sys_query(w);
@@ -213,7 +213,7 @@ int main(int argc, char** argv) {
                 // render_draw_quad(dRenderer, &(quad){10.0f, 10.0f, 100.0f, 100.0f}, (vector4){1.0f, 0.0f, 0.0f, 1.0f});
                 // render_draw_circle(dRenderer, (vector2){50.0f, 50.0f}, 20.0f, (vector4){1.0f, 0.0f, 0.0f, 1.0f});
                 debug_render_flush(dRenderer);
-                b2World_Step(world_id, 1.0f/60.0f, 4);
+                b2World_Step(w->world_id, 1.0f/60.0f, 4);
 
                 //check and call events and swap the buffers
                 glfwSwapBuffers(gw);

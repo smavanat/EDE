@@ -14,27 +14,34 @@ plaza *init_plaza(void) {
     p->componentArrays = malloc(sizeof(component_array *) * NUM_COMPONENTS);
     for(int i = 0; i < NUM_COMPONENTS; i++) {
         int componentSize = 0;
+        void (*free_func) = NULL;
         switch (i) {
             case TRANSFORM:
                 componentSize = sizeof(transform);
+                free_func = &free_transform;
                 break;
             case SPRITE:
                 componentSize = sizeof(sprite);
+                free_func = &free_sprite;
                 break;
             case COLLIDER:
                 componentSize = sizeof(collider);
+                free_func = &free_collider;
                 break;
-            case PATHFINDING:
-                componentSize = sizeof(pathfinding);
-                break;
-            case PIXEL:
-                componentSize = sizeof(pixel);
-                break;
+            // case PATHFINDING:
+            //     componentSize = sizeof(pathfinding);
+            //     free_func = &free_pathfinding;
+            //     break;
+            // case PIXEL:
+            //     componentSize = sizeof(pixel);
+            //     free_func = &free_pixel;
+            //     break;
             case RIGIDBODY:
                 componentSize = sizeof(rigidbody);
+                free_func = &free_rigidbody;
                 break;
         }
-        p->componentArrays[i] = initialise_component_array(componentSize);
+        p->componentArrays[i] = initialise_component_array(componentSize, free_func);
     }
     p->entitySignatures = malloc(sizeof(signature)*MAX_ENTITIES);
     memset(p->entitySignatures, 0, sizeof(signature) * MAX_ENTITIES);
@@ -65,7 +72,7 @@ void destroy_entity(plaza *p, entity e) {
     }
 
     p->entities->freeList[++p->entities->top] = e;
-    p->entities->count--;   // p->tailer = new;
+    p->entities->count--;
 
     //Remove all the components attached to this entity
     for(int i = 0; i < 32; i++) {
@@ -129,19 +136,20 @@ void remove_component_from_entity(plaza *p, entity e, component_type t) {
     //Removing entity from its old archetype:
     for(size_t i = 0; i < p->entityArchetypes->size; i++) {
         if(get_value(p->entityArchetypes, archetype *, i)->signature == p->entitySignatures[e]) {
-            //This is very inefficient. When doing chunking store a sparse set that uses 
+            //This is very inefficient. When doing chunking store a sparse set that uses
             //an int32 split into three parts:  one to represent the archetype that the entity is in
             //                                  one to represent the chunk the entity is in
             //                                  one to represent the index of the entity in the chunk
             //Each part can be 8 bits
             //This will lead to much faster lookup
-            for(size_t j = 0; j < p->entityArchetypes->size; j++) {
-                if(e == get_value(p->entityArchetypes, archetype *, i)->entities[j]) {
-                    get_value(p->entityArchetypes, archetype *, i)->entities[j] = get_value(p->entityArchetypes, archetype *, i)->entities[p->entityArchetypes->size-1];
+            archetype *arch = get_value(p->entityArchetypes, archetype *, i);
+            for(size_t j = 0; j < arch->size; j++) {
+                if(e == arch->entities[j]) {
+                    arch->entities[j] = arch->entities[arch->size-1];
+                    arch->size--;
                     break;
                 }
             }
-            get_value(p->entityArchetypes, archetype *, i)->size--;
             break;
         }
     }

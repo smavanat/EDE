@@ -4,16 +4,20 @@
 
 void grow_queue(queue * slice, size_t size) {
     size_t new_capacity = slice->capacity ? slice->capacity * 2 : 1;
-    //Checking if the dynamic array is the last allocation in the arena
-    void *data = malloc(new_capacity*size);
-    if(slice->size > 0) {
-        // Copy elements in correct order
-        for (size_t i = 0; i < slice->size; i++) {
-            memcpy(&data[i], &slice->data[(slice->frontptr + i) % slice->capacity], size);
+    char *new_data = malloc(new_capacity * size);
+
+    if (slice->size > 0) {
+        for (size_t i = 0; i < slice->size; ++i) {
+            size_t idx = (slice->frontptr + i) % slice->capacity;
+            memcpy(new_data + i * size, (char*)slice->data + idx * size, size);
         }
     }
-    slice->data = data;
+
+    free(slice->data);
+    slice->data = new_data;
     slice->capacity = new_capacity;
+    slice->frontptr = 0;
+    slice->backptr = slice->size;
 }
 
 queue *queue_alloc(size_t arr_size, size_t t_size) {

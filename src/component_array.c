@@ -2,7 +2,7 @@
 #include <string.h>
 #include <assert.h>
 
-component_array *initialise_component_array(int componentSize) {
+component_array *initialise_component_array(int componentSize, void (*free_func)(void *component)) {
     component_array *c = malloc(sizeof(component_array));
     c->sparse = malloc(sizeof(int)*MAX_ENTITIES);
     memset(c->sparse, -1, sizeof(int)*MAX_ENTITIES);
@@ -10,6 +10,7 @@ component_array *initialise_component_array(int componentSize) {
     c->componentArray = malloc(componentSize*MAX_ENTITIES);
     c->size = 0;
     c->componentSize = componentSize;
+    c->free_func = free_func;
     return c;
 }
 
@@ -34,6 +35,7 @@ int remove_component(component_array *cArr, entity e) {
         //Replace component to be removed with last element in the array and set the last element to null
         //if not removing the last element
         int removalIndex = cArr->sparse[e];
+        cArr->free_func((char *)cArr->componentArray + (removalIndex * cArr->componentSize));
         if(removalIndex != cArr->size - 1) {
             void *target = (char *)cArr->componentArray + removalIndex * cArr->componentSize;
             void *source = (char *)cArr->componentArray + (cArr->size - 1) * cArr->componentSize;
@@ -45,7 +47,7 @@ int remove_component(component_array *cArr, entity e) {
             cArr->dense[removalIndex] = replacingEntity;
         }
         //Erase the remvoed entity
-        cArr->sparse[cArr->size-1] = -1;
+        cArr->sparse[e] = -1;       // cArr->sparse[cArr->size-1] = -1;
         cArr->size--;
         return 1;
 }

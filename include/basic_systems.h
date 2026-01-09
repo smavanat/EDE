@@ -10,6 +10,7 @@ extern pixel_renderer *pRenderer;
 extern debug_renderer *dRenderer;
 extern GLFWwindow *gw;
 extern world_grid *grid;
+extern b2WorldId world_id;
 
 void render_system_init(plaza *p, ecs_system *s);
 void render_system_update(plaza *p, ecs_system *s, float dt);

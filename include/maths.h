@@ -11,11 +11,6 @@
 #define DEGREES_TO_RADIANS M_PI / 180
 
 typedef b2Vec2 vector2;
-// typedef struct {
-//     float x;
-//     float y;
-// } vector2;
-
 typedef struct {
     int x;
     int y;

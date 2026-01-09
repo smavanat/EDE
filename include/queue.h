@@ -24,10 +24,13 @@ void free_queue(queue *q);
 } while (0)
 
 //Removes the node from the front of the queue;
-#define deqeue(q, type, out) do {                                           \
-    if ((q)->size == 0) break;                                              \
-    (out) = ((type*)(q)->data)[(q)->frontptr];                              \
-    (q)->frontptr = ((q)->frontptr + 1) % (q)->capacity;                    \
-    (q)->size--;                                                            \
+#define dequeue(q, type, out, ok) do {                                      \
+    if ((q)->size == 0) (ok) = false;                                       \
+    else {                                                                  \
+        (out) = ((type*)(q)->data)[(q)->frontptr];                          \
+        (q)->frontptr = ((q)->frontptr + 1) % (q)->capacity;                \
+        (q)->size--;                                                        \
+        (ok) = true;                                                        \
+    }                                                                       \
 } while (0)
 #endif

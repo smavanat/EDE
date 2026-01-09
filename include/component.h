@@ -18,9 +18,9 @@ typedef enum{
     TRANSFORM,
     SPRITE,
     COLLIDER,
-    PATHFINDING,
+    // PATHFINDING,
     RIGIDBODY,
-    PIXEL,
+    // PIXEL,
     NUM_COMPONENTS //Used for counting the number of components
 } component_type;
 
@@ -39,6 +39,7 @@ typedef struct {
 } transform;
 
 transform *create_transform(vector2 position, float zIndex, float angle);
+void free_transform(void *t);
 
 //Needs to be filled in later once OpenGL is setup
 //Holds destructible sprite texture data
@@ -50,6 +51,7 @@ typedef struct {
 } sprite;
 
 sprite *create_sprite(unsigned int texture, vector2 coords[4], vector4 colours[4], vector2 uv[4]);
+void free_sprite(void *spr);
 
 //Needs to be finished once box2D is setup
 //Holds the b2BodyId of a box2D collider alongside what kind of collider it is
@@ -64,6 +66,7 @@ b2BodyId create_capsule_collider(vector2 center1, vector2 center2, float rotatio
 b2BodyId create_polygon_collider(vector2* points, int pointsSize, vector2 center, float rotation, b2WorldId worldId, b2BodyType type);
 vector2 rotate_translate(vector2* vector, float angle);
 void draw_collider(collider *c, debug_renderer *dRenderer, vector4 colour);
+void free_collider(void *c);
 
 //Holds pathfinding data to be used to calculate a viable path between two points which is then re-stored in this component
 typedef struct {
@@ -72,6 +75,7 @@ typedef struct {
     vector2 endPos;
     int size; //The size of the agent that is traversing through this path
 } pathfinding;
+void free_pathfinding(void *p);
 
 //The following components are for implementing the destruction system to be more like the way Noita actually does it, buy having the rigidbody be fully made up of pixels
 
@@ -91,6 +95,8 @@ typedef struct {
     ivector2 *pixel_coords;
     uint32_t pixel_count;
 } rigidbody;
+
+void free_rigidbody(void *rb);
 
 typedef struct {
     uint16_t width;

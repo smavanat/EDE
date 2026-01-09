@@ -65,11 +65,23 @@ void rigidbody_system_update(plaza *p, ecs_system *s, float dt) {
     if (glfwGetWindowAttrib(gw, GLFW_FOCUSED)) { //Need to do this otherwise erasure would happen even when the window wasn't open
         glfwGetCursorPos(gw, &cursor_x, &cursor_y);
         list *rb_list = list_alloc(10, sizeof(ivector2));
+        list *entity_list = list_alloc(10, sizeof(int32_t));
         erasePixels(2, cursor_x * 0.1, cursor_y * 0.1, new_grid, rb_list);
         for(int i = 0; i < rb_list->size; i++) {
             uint32_t grid_pos = (get_value(rb_list, ivector2, i).y * new_grid->width) + get_value(rb_list, ivector2, i).x;
             rigidbody *rb = get_component_from_entity(p, new_grid->pixels[grid_pos].parent_body, RIGIDBODY);
             transform *t = get_component_from_entity(p, new_grid->pixels[grid_pos].parent_body, TRANSFORM);
+
+            int index = -1;
+            for(int i = 0; i < entity_list->size; i++) {
+                if(get_value(entity_list, int32_t, i) == new_grid->pixels[grid_pos].parent_body){
+                    index = i;
+                    break;
+                }
+            }
+            if(index == -1) {
+                push_value(entity_list, int32_t, new_grid->pixels[grid_pos].parent_body);
+            }
 
             vector2 d = {(get_value(rb_list, ivector2, i).x - t->position.x), (get_value(rb_list, ivector2, i).y - t->position.y)};
             vector2 rotated_pos = rotateAboutPoint(&d, &(vector2){0,0}, -t->angle, 1);
@@ -86,7 +98,12 @@ void rigidbody_system_update(plaza *p, ecs_system *s, float dt) {
                 }
             }
         }
+        for(int i = 0; i < entity_list->size; i++) {
+            // rigidbody *rb = get_component_from_entity(p, new_grid, RIGIDBODY)
+            split_rigidbody(get_value(entity_list, int32_t, i), p, new_grid, world_id);
+        }
     }
+    free(grid->pixels);
     free(grid);
     grid = new_grid;
 }

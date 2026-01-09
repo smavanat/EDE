@@ -2,10 +2,11 @@
 #include <stdlib.h>
 
 //Creating the world
-world *world_alloc(void) {
+world *world_alloc(b2WorldId world_id) {
     world *ret = malloc(sizeof(world));
     ret->p = init_plaza();
     ret->systems = list_alloc(16, sizeof(ecs_system *));
+    ret->world_id = world_id;
 
     return ret;
 }
