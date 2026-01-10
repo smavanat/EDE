@@ -1,6 +1,7 @@
 #include "../include/component.h"
 #include "../include/list.h"
 #include "../include/queue.h"
+#include <float.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -164,17 +165,15 @@ typedef struct {
 bool IsConvex(vector2 *p1, vector2 *p2, vector2 *p3) {
     double tmp;
     tmp = (p3->y - p1->y) * (p2->x - p1->x) - (p3->x - p1->x) * (p2->y - p1->y);
-    if (tmp > 0) {
+    if (tmp >= 0) {
         return 1;
-    } else {
-        return 0;
     }
+    return 0;
+
 }
 
 bool InCone(vector2 *p1, vector2 *p2, vector2 *p3, vector2 *p) {
-  bool convex;
-
-  convex = IsConvex(p1, p2, p3);
+  bool convex = IsConvex(p1, p2, p3);
 
     if (convex) {
         if (!IsConvex(p1, p2, p)) {
@@ -276,6 +275,7 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
                     p4 = poly[i + 1];
                 }
                 if (!InCone(&p3, &p1, &p4, &p2)) {
+                    printf("Not incone\n");
                     dpstates[j][i].visible = false;
                     continue;
                 }
@@ -291,6 +291,7 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
                     p4 = poly[j + 1];
                 }
                 if (!InCone(&p3, &p2, &p4, &p1)) {
+                    printf("Not incone\n");
                     dpstates[j][i].visible = false;
                     continue;
                 }
@@ -303,6 +304,7 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
                         p4 = poly[k + 1];
                     }
                     if (Intersects(&p1, &p2, &p3, &p4)) {
+                        printf("Vertices intersect\n");
                         dpstates[j][i].visible = false;
                         break;
                     }
@@ -315,18 +317,22 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
     dpstates[n - 1][0].weight = 0;
     dpstates[n - 1][0].bestvertex = -1;
 
+    minweight = DBL_MAX;
     for (gap = 2; gap < n; gap++) {
         for (i = 0; i < (n - gap); i++) {
             j = i + gap;
             if (!dpstates[j][i].visible) {
+                printf("DPStates at [j][i] is not visible\n");
                 continue;
             }
             bestvertex = -1;
             for (k = (i + 1); k < j; k++) {
                 if (!dpstates[k][i].visible) {
+                    printf("DPStates at [k][i] is not visible\n");
                     continue;
                 }
                 if (!dpstates[j][k].visible) {
+                    printf("DPStates at [j][k] is not visible\n");
                     continue;
                 }
 
@@ -344,11 +350,13 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
                 weight = dpstates[k][i].weight + dpstates[j][k].weight + d1 + d2;
 
                 if ((bestvertex == -1) || (weight < minweight)) {
+                    printf("Best vertex is -1 or weight < minweight\n");
                     bestvertex = k;
                     minweight = weight;
                 }
             }
             if (bestvertex == -1) {
+                printf("Best Vertex is -1 (352)\n");
                 for (i = 1; i < n; i++) {
                     free(dpstates[i]);
                 }
@@ -373,6 +381,7 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
         if(!ok) break;
         bestvertex = dpstates[diagonal.index2][diagonal.index1].bestvertex;
         if (bestvertex == -1) {
+            printf("Best Vertex is -1 (377)\n");
             ret = 0;
             break;
         }
@@ -404,15 +413,16 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
 }
 
 b2BodyId create_polygon_collider(vector2* points, int pointsSize, vector2 center, float rotation, b2WorldId worldId, b2BodyType type) {
+    vector2 *b2_points = malloc(sizeof(vector2) * pointsSize);
     for(int i = 0; i < pointsSize; i++) {
         printf("(%f, %f) ", points[i].x, points[i].y);
+        b2_points[i] = (vector2){points[i].x *PIXELS_TO_METRES, points[i].y *PIXELS_TO_METRES};
     }
     printf("\n");
     //Default polygon initialisation
     b2BodyDef retBodyDef = b2DefaultBodyDef();
     retBodyDef.type = type;
     retBodyDef.position = (vector2){center.x * PIXELS_TO_METRES, center.y * PIXELS_TO_METRES};
-    printf("Position: (%f, %f)", retBodyDef.position.x, retBodyDef.position.y);
     retBodyDef.rotation = (b2Rot){(float)cos(rotation), (float)sin(rotation)};
     b2BodyId retId = b2CreateBody(worldId, &retBodyDef);
 
@@ -438,7 +448,8 @@ b2BodyId create_polygon_collider(vector2* points, int pointsSize, vector2 center
     // poly->SetOrientation(TPPL_ORIENTATION_CCW); //This method does not actually check the order of each vertex. Need to change it so it sorts the points properly.
     // TPPLPartition test = TPPLPartition();
     int result = triangulate_opt(points, pointsSize, triangle_list); //Traingulate the polygon shape
-    printf("Result: %i", result);
+    printf("Result: %i ", result);
+    printf("Number of triangles generated: %lu\n", triangle_list->size);
     for(int i = 0; i < triangle_list->size; i++) {
         triangle_polygon t = get_value(triangle_list, triangle_polygon, i);
         for(int j = 0; j < 3; j++) {
@@ -465,6 +476,7 @@ b2BodyId create_polygon_collider(vector2* points, int pointsSize, vector2 center
         }
     }
     free_list(triangle_list);
+    free(b2_points);
     return retId;
 }
 

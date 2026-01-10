@@ -97,9 +97,9 @@ void rigidbody_system_update(plaza *p, ecs_system *s, float dt) {
                     break;
                 }
             }
+            new_grid->pixels[grid_pos].parent_body = -1; //Need to actually set the pixel to have no parent otherwise bfs will be wierd
         }
         for(int i = 0; i < entity_list->size; i++) {
-            // rigidbody *rb = get_component_from_entity(p, new_grid, RIGIDBODY)
             split_rigidbody(get_value(entity_list, int32_t, i), p, new_grid, world_id);
         }
     }
