@@ -210,7 +210,6 @@ list *marching_squares(list *pixel_coords, world_grid *grid, int32_t id) {
 
         current_point.x += stepX;
         current_point.y += stepY;
-        printf("Current Point: (%i, %i)\n", current_point.x, current_point.y);
 
         // Boundary checks. Should not happen but here just in case.
         if(current_point.x < -1 || current_point.x > grid->width || current_point.y < -1 || current_point.y > grid->height) {
@@ -321,12 +320,13 @@ list *bfs(ivector2 start, pixel *grid_coords, int size, int width, int height, i
     return indecies;
 }
 
-void construct_new_rigidbody(list *pixel_coords, world_grid *grid, uint8_t colour[4], float zIndex, float angle, plaza *p, b2WorldId world_id) {
+void construct_new_rigidbody(list *pixel_coords, world_grid *grid, uint8_t colour[4], float zIndex, float angle, plaza *p, b2WorldId world_id, b2BodyType type) {
     int minX = INT_MAX, maxX = INT_MIN, minY = INT_MAX, maxY = INT_MIN;
 
+    //Getting min and max values of x and y for all coord pairs to calculate shape dimensions and centre
     for(int i = 0; i < pixel_coords->size; i++) {
         ivector2 coords = get_value(pixel_coords, ivector2, i);
-        printf("P Coord: (%i, %i)\n", coords.x, coords.y);
+        // printf("P Coord: (%i, %i)\n", coords.x, coords.y);
         if(coords.x < minX) minX = coords.x;
         if(coords.x > maxX) maxX = coords.x;
         if(coords.y < minY) minY = coords.y;
@@ -334,37 +334,47 @@ void construct_new_rigidbody(list *pixel_coords, world_grid *grid, uint8_t colou
     }
 
     printf("MinX: %i, MaxX: %i, MinY: %i, MaxY: %i\n", minX, maxX, minY, maxY);
+    //Calculating dimensions and centre
     int width = maxX - minX + 1;
     int height = maxY - minY + 1;
+    int centreX = minX + (width/2);
+    int centreY = minY + (height/2);
     printf("Width: %i, Height: %i\n", width, height);
-    printf("Center: (%i, %i)\n", minX + (width/2), minY + (height/2));
+    printf("Center: (%i, %i)\n", centreX, centreY);
 
-    entity e = create_entity(p);
-    transform *t = create_transform((vector2){minX + (width/2), minY + (height/2)}, zIndex, angle);
+    entity e = create_entity(p); //Creating the new entity
+
+    //Creating the new transform -> position is the new centre, but keeps old zIndex and angle
+    transform *t = create_transform((vector2){centreX, centreY}, zIndex, angle);
     add_component_to_entity(p, e, TRANSFORM, t);
 
-    rigidbody *rb = create_rigidbody_from_pixels(e, width, height, colour, (ivector2){minX + (width/2), minY + (height/2)}, pixel_coords, grid);
+    //Creating the new rigidbody -> Need to copy over the pixel coords and calculate their relative position to the new centre
+    rigidbody *rb = create_rigidbody_from_pixels(e, width, height, colour, (ivector2){centreX, centreY}, pixel_coords, grid);
     add_component_to_entity(p, e, RIGIDBODY, rb);
 
+    //Marching squares on the outline of the pixels
     list *ms_points = marching_squares(pixel_coords, grid, e);
     printf("Marching Squares size: %lu\n", ms_points->size);
+    //Ramer-Douglas-Peucker to simplify the rdp
     list *rdp_points = list_alloc(ms_points->size, sizeof(ivector2));
     rdp(0, ms_points->size, 0, ms_points, rdp_points);
-    for(int i = 0; i < rdp_points->size; i++) {
-        printf("RDP Point(%i, %i)\n", get_value(rdp_points, ivector2, i).x, get_value(rdp_points, ivector2, i).y);
-    }
+    push_value(rdp_points, ivector2, get_value(rdp_points, ivector2, 0)); //Need to add to get full circle of points
+
+    //Convert the points into vector2 from ivector2
     vector2 *points = malloc(sizeof(vector2) * rdp_points->size);
     for(int i = 0; i < rdp_points->size; i++) {
         points[i] = (vector2){get_value(rdp_points, ivector2, i).x, get_value(rdp_points, ivector2, i).y};
     }
+
+    //Create the new polygon collider
     collider *c = malloc(sizeof(collider));
     c->type = POLYGON;
-    c->collider_id = create_polygon_collider(points, rdp_points->size, (vector2){minX + (width/2), minY + (height/2)}, t->angle, world_id, b2_dynamicBody);
+    c->collider_id = create_polygon_collider(points, rdp_points->size, (vector2){centreX, centreY}, t->angle, world_id, type);
     add_component_to_entity(p, e, COLLIDER,  c);
 
     free(ms_points);
     free(rdp_points);
-    // free(points);
+    free(points);
 }
 
 void split_rigidbody(entity id, plaza *p, world_grid *grid, b2WorldId world_id) {
@@ -394,7 +404,9 @@ void split_rigidbody(entity id, plaza *p, world_grid *grid, b2WorldId world_id) 
     if(new_rigidbody_pixels->size > 0) {
         //Make new rigidbodies here
         for(int i = 0; i < new_rigidbody_pixels->size; i++) {
-            construct_new_rigidbody(get_value(new_rigidbody_pixels, list *, i), grid, rb->colour, t->zIndex, t->angle, p, world_id);
+            collider *c = get_component_from_entity(p, id, COLLIDER); //NEED TO GET b2BodyType FROM COLLIDER!!!!
+            b2BodyType type = b2Body_GetType(c->collider_id);
+            construct_new_rigidbody(get_value(new_rigidbody_pixels, list *, i), grid, rb->colour, t->zIndex, t->angle, p, world_id, type);
         }
     }
     destroy_entity(p, id);

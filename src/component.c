@@ -135,7 +135,7 @@ vector2 ComputeCompoundCentroid(list *shapes) {
 
 //Centers a shape around its unweighted centroid
 void CenterCompundShape(list *shapes) {
-    vector2 compoundCentroid = ComputeCompoundCentroid(shapes);
+    vector2 compoundCentroid = ComputeCompoundCentroid(shapes); //I THINK THE COMPOUND CENTROID IS WRONG
 
     for (int i = 0; i < shapes->size; i++) {
         triangle_polygon tp = get_value(shapes, triangle_polygon, i);
@@ -165,7 +165,7 @@ typedef struct {
 bool IsConvex(vector2 *p1, vector2 *p2, vector2 *p3) {
     double tmp;
     tmp = (p3->y - p1->y) * (p2->x - p1->x) - (p3->x - p1->x) * (p2->y - p1->y);
-    if (tmp >= 0) {
+    if (tmp > 0) {
         return 1;
     }
     return 0;
@@ -275,7 +275,7 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
                     p4 = poly[i + 1];
                 }
                 if (!InCone(&p3, &p1, &p4, &p2)) {
-                    printf("Not incone\n");
+                    // printf("Not incone\n");
                     dpstates[j][i].visible = false;
                     continue;
                 }
@@ -291,7 +291,7 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
                     p4 = poly[j + 1];
                 }
                 if (!InCone(&p3, &p2, &p4, &p1)) {
-                    printf("Not incone\n");
+                    // printf("Not incone\n");
                     dpstates[j][i].visible = false;
                     continue;
                 }
@@ -304,7 +304,7 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
                         p4 = poly[k + 1];
                     }
                     if (Intersects(&p1, &p2, &p3, &p4)) {
-                        printf("Vertices intersect\n");
+                        // printf("Vertices intersect\n");
                         dpstates[j][i].visible = false;
                         break;
                     }
@@ -312,7 +312,7 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
             }
         }
     }
-    printf("n: %i\n", n);
+    // printf("n: %i\n", n);
     dpstates[n - 1][0].visible = true;
     dpstates[n - 1][0].weight = 0;
     dpstates[n - 1][0].bestvertex = -1;
@@ -322,17 +322,17 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
         for (i = 0; i < (n - gap); i++) {
             j = i + gap;
             if (!dpstates[j][i].visible) {
-                printf("DPStates at [j][i] is not visible\n");
+                // printf("DPStates at [j][i] is not visible\n");
                 continue;
             }
             bestvertex = -1;
             for (k = (i + 1); k < j; k++) {
                 if (!dpstates[k][i].visible) {
-                    printf("DPStates at [k][i] is not visible\n");
+                    // printf("DPStates at [k][i] is not visible\n");
                     continue;
                 }
                 if (!dpstates[j][k].visible) {
-                    printf("DPStates at [j][k] is not visible\n");
+                    // printf("DPStates at [j][k] is not visible\n");
                     continue;
                 }
 
@@ -350,13 +350,13 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
                 weight = dpstates[k][i].weight + dpstates[j][k].weight + d1 + d2;
 
                 if ((bestvertex == -1) || (weight < minweight)) {
-                    printf("Best vertex is -1 or weight < minweight\n");
+                    // printf("Best vertex is -1 or weight < minweight\n");
                     bestvertex = k;
                     minweight = weight;
                 }
             }
             if (bestvertex == -1) {
-                printf("Best Vertex is -1 (352)\n");
+                // printf("Best Vertex is -1 (352)\n");
                 for (i = 1; i < n; i++) {
                     free(dpstates[i]);
                 }
@@ -375,30 +375,24 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
     enqueue(diagonals, Diagonal, newdiagonal);
     bool ok;
     while (diagonals->size > 0) {
-        // diagonal = *(diagonals.begin());
-        // diagonals.pop_front();
         dequeue(diagonals, Diagonal, diagonal, ok);
         if(!ok) break;
         bestvertex = dpstates[diagonal.index2][diagonal.index1].bestvertex;
         if (bestvertex == -1) {
-            printf("Best Vertex is -1 (377)\n");
+            // printf("Best Vertex is -1 (377)\n");
             ret = 0;
             break;
         }
-        // triangle.Triangle(poly->GetPoint(diagonal.index1), poly->GetPoint(bestvertex), poly->GetPoint(diagonal.index2));
         triangle = (triangle_polygon){poly[diagonal.index1], poly[bestvertex], poly[diagonal.index2]};
-        // triangles->push_back(triangle);
         push_value(triangles, triangle_polygon, triangle);
         if (bestvertex > (diagonal.index1 + 1)) {
             newdiagonal.index1 = diagonal.index1;
             newdiagonal.index2 = bestvertex;
-          // diagonals.push_back(newdiagonal);
             enqueue(diagonals, Diagonal, newdiagonal);
         }
         if (diagonal.index2 > (bestvertex + 1)) {
             newdiagonal.index1 = bestvertex;
             newdiagonal.index2 = diagonal.index2;
-            // diagonals.push_back(newdiagonal);
             enqueue(diagonals, Diagonal, newdiagonal);
         }
     }
@@ -413,10 +407,13 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
 }
 
 b2BodyId create_polygon_collider(vector2* points, int pointsSize, vector2 center, float rotation, b2WorldId worldId, b2BodyType type) {
+    printf("Center: (%f, %f)\n", center.x, center.y);
     vector2 *b2_points = malloc(sizeof(vector2) * pointsSize);
     for(int i = 0; i < pointsSize; i++) {
-        printf("(%f, %f) ", points[i].x, points[i].y);
-        b2_points[i] = (vector2){points[i].x *PIXELS_TO_METRES, points[i].y *PIXELS_TO_METRES};
+        b2_points[pointsSize - i - 1] = (vector2){(points[i].x - center.x + 1) *PIXELS_TO_METRES, (points[i].y-center.y + 1) *PIXELS_TO_METRES};
+    }
+    for(int i = 0; i < pointsSize; i++) {
+        printf("(%f, %f) ", b2_points[i].x, b2_points[i].y);
     }
     printf("\n");
     //Default polygon initialisation
@@ -433,22 +430,12 @@ b2BodyId create_polygon_collider(vector2* points, int pointsSize, vector2 center
     //simplification could occur, which I want to avoid. This also helps to make sure that the vertices of the sub-polygons is
     //standardised.
 
-    //Creating the polygon for Polypartition
-    // TPPLPoly* poly = new TPPLPoly();
-    // poly->Init(pointsSize);
-    // TPPLPolyList polyList;
+    //Creating the list to hold the triangles generated by partitioning algorithm
     list *triangle_list = list_alloc(10, sizeof(triangle_polygon));
 
-    // for (int i = 0; i < pointsSize; i++) {
-    //     (*poly)[i].x = points[i].x;
-    //     (*poly)[i].y = points[i].y;
-    // }
-
     //Need to set it to be oriented Counter-Clockwise otherwise the triangulation algorithm fails.
-    // poly->SetOrientation(TPPL_ORIENTATION_CCW); //This method does not actually check the order of each vertex. Need to change it so it sorts the points properly.
-    // TPPLPartition test = TPPLPartition();
-    int result = triangulate_opt(points, pointsSize, triangle_list); //Traingulate the polygon shape
-    printf("Result: %i ", result);
+    int result = triangulate_opt(b2_points, pointsSize, triangle_list); //Traingulate the polygon shape
+    printf("Result: %i, ", result);
     printf("Number of triangles generated: %lu\n", triangle_list->size);
     for(int i = 0; i < triangle_list->size; i++) {
         triangle_polygon t = get_value(triangle_list, triangle_polygon, i);
@@ -459,7 +446,7 @@ b2BodyId create_polygon_collider(vector2* points, int pointsSize, vector2 center
     printf("\n");
 
     //Trying to center the polygon:
-    CenterCompundShape(triangle_list);
+    // CenterCompundShape(triangle_list);
 
     //Adding the polygons to the collider, or printing an error message if something goes wrong.
     for (int i = 0; i < triangle_list->size; i++) {
@@ -475,6 +462,7 @@ b2BodyId create_polygon_collider(vector2* points, int pointsSize, vector2 center
             b2Shape_SetFriction(testShapeId, 0.3);
         }
     }
+    printf("Center after creation: (%f, %f)\n", retBodyDef.position.x * METRES_TO_PIXELS, retBodyDef.position.y * METRES_TO_PIXELS);
     free_list(triangle_list);
     free(b2_points);
     return retId;
