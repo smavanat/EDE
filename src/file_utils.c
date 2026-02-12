@@ -3,11 +3,18 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+/**
+ * Reads a file in its entirety
+ * @param path the filepath
+ * @param buf a buffer to add the contents of the fiel tp
+ * @param addNull whether the buffer should be null terminated or not
+ * @return the filesize if successful, -1 otherwise
+ */
 int read_to_end(char const *path, char **buf, bool addNull) {
-    FILE *fp;
-    size_t fsz;
-    long offEnd;
-    int rc;
+    FILE *fp; //Struct to store our file data
+    size_t fsz; //The file size
+    long offEnd; //Byte offset to the end of the file
+    int rc; //Return code of the fseek function
 
     //Open the file
     fp = fopen(path, "rb");
@@ -21,7 +28,7 @@ int read_to_end(char const *path, char **buf, bool addNull) {
         return -1;
     }
 
-    //Byte offset to the end of the file size
+    //Byte offset to the end of the file
     if(0 > (offEnd = ftell(fp))) {
         return -1;
     }

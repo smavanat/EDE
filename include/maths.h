@@ -40,27 +40,68 @@ typedef struct {
 #ifdef __cplusplus
 extern "C" {
 #endif
+/**
+ * Converts a vector2 to an ivector2 by casting its x and y components to ints
+ * @param v the vector2 to convert
+ * @return the converted vector as an ivector2
+ */
 ivector2 vec_to_ivec(vector2 v);
+/**
+ * Converts an ivector2 to an ivector2 by casting its x and y components to floats
+ * @param v the ivector2 to convert
+ * @return the converted ivector as a vector2
+ */
 vector2 ivec_to_vec(ivector2 v);
-
-//Rotates a vector2 about the z-axis and returns the result. Takes an angle in degrees or in radians, but if 
-//the angle is in degrees, the inRadians parameter must be set to false;
+/**
+ * Rotates a vector2 about the z-axis and returns the result
+ * @param vec the vector2 to rotate
+ * @param angle the angle to rotate around. Can be in degrees or radians
+ * @param in_radians true if angle has been provided in radians. false otherwise
+ * @return the rotated vector
+ */
 vector2 rotate(vector2* vec, double angle, bool inRadians);
-
-//Rotates a vector2 about a point in the z-axis and returns the result. Takes an angle in degrees or in radians, 
-//but if the angle is in degrees, the inRadians parameter must be set to false.
+/**
+ * Rotates a vector2 about a point in the z-axis and returns the result
+ * @param point the vector2 to rotate
+ * @param centre the point to rotate about
+ * @param angle the angle to rotate around. Can be in degrees or radians
+ * @param in_radians true if angle has been provided in radians. false otherwise
+ * @return the rotated vector
+ */
 vector2 rotateAboutPoint(vector2* point, vector2* centre, double angle, bool inRadians);
-
-vector2 rotateAboutPoint2(vector2* point, vector2* centre, double angle, bool inRadians);
-
+/**
+ * Checks if two vectors are the same by seeing if their constituent parts are the same
+ * @param a the first vector to compare
+ * @param b the second vector to compare
+ * @return true if they are the same, false otherwise
+ */
 bool equals(vector2 a, vector2 b);
-
-double normalizeAngle(double angle);
-
-void normalise(vector2* v);
-
+/**
+ * Normalises an angle between 0 and 2pi
+ * @param angle the angle to normalise. Must be in radians
+ * @return the normalised angle
+ */
+double normalise_angle(double angle);
+/**
+ * Normalises a vector in the range [-1, 1];
+ * @param v the vector to normalise
+ * @return the normalised vector
+ */
+vector2 normalise_vector(vector2* v);
+/**
+ * Clamps an integer between two values
+ * @param val the integer to clamp
+ * @param min_val the lower bound of the clamp
+ * @param max_val the upper bound of the clamp
+ * @return val clamped between min_val and max_val
+ */
 int clamp(int val, int min_val, int max_val);
-
+/**
+ * Returns the distance between two vectors
+ * @param v1 the first vector
+ * @param v2 the second vector
+ * @return the absolute distance between v1 and v2
+ */
 float distance(vector2 *v1, vector2 *v2);
 
 #ifdef __cplusplus

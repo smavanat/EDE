@@ -12,9 +12,45 @@ extern debug_renderer *dRenderer;
 uint32_t rigidbody_to_pixel_pos(uint32_t pos, uint32_t r_width, uint32_t w_width);
 uint32_t world_to_pixel_pos(ivector2 pos, uint32_t width);
 ivector2 pixel_to_world_pos(uint32_t pos, uint32_t width);
-void sample_pixel(float x, float y, pixel **pixel_array, uint32_t width, uint32_t height, uint8_t *ret);
+/**
+ * Creates a brand new rigidbody component and returns a reference to it
+ * @param id the id of its parent entity
+ * @param width the width of the rigidbody
+ * @param height the height of the rigidbody
+ * @param colour the colour of its pixels (currently assuming all pixels in a rigidbody have uniform colour, can change this later)
+ * @param centre its centre in worldspace
+ * @param grid a pointer to the world grid where this rigidbody is located
+ * @return a pointer to the created rigidbody
+ */
 rigidbody *create_rigidbody(uint32_t id, uint16_t width, uint16_t height, uint8_t colour[4], ivector2 startpos, world_grid *grid);
+/**
+ * Creates a rigidbody from a set of pixel data rather than just width and height, mostly used for split or non-rectangular rigidbodies
+ * @param id the id of its parent entity
+ * @param width the width of the rigidbody
+ * @param height the height of the rigidbody
+ * @param colour the colour of its pixels (currently assuming all pixels in a rigidbody have uniform colour, can change this later)
+ * @param centre its centre in worldspace
+ * @param pixel_coords a list containing the grid coordinates of the pixels that make up the rigidbody
+ * @param grid a pointer to the world grid where this rigidbody is located
+ * @return a pointer to the created rigidbody
+ */
+rigidbody *create_rigidbody_from_pixels(uint32_t id, uint16_t width, uint16_t height, uint8_t colour[4], ivector2 centre, list *pixel_coords, world_grid *grid);
+/**
+ * Erases pixels in a square area. Used for testing the pixel destruction system
+ * @param radius the half-width of the square erasure area
+ * @param x the x-coordinate of the centre of the erasing square
+ * @param y the y-coordinate of the centre of the erasing square
+ * @param grid the world grid that erasure is occuring on
+ * @param rbs a pointer to a list to store the coordintes of erased pixels that are part of a rigidbody
+ */
 void erasePixels(int radius, int x, int y, world_grid *grid, list *rbs);
+/**
+ * Splits a 'dirty' (has erased pixels) rigidbody into new rigidbodies if necessary, or adjusts its collider if not
+ * @param id the entity to which the rigidbody belongs
+ * @param p a pointer to the plaza managing entities
+ * @param grid a pointer to the world_grid where the rigidbody is located
+ * @param world_id the id of the box2d world where the collider of the rigidbody is located
+ */
 void split_rigidbody(entity id, plaza *p, world_grid *grid, b2WorldId world_id);
 
 #endif
