@@ -84,13 +84,14 @@ rigidbody *create_rigidbody_from_pixels(uint32_t id, uint16_t width, uint16_t he
 
 void erasePixels(int radius, int x, int y, world_grid *grid, list *rbs) {
     if (radius > 0) {
-        for (int w = 0; w < radius * 2; w++)
+        for (int h = 0; h < radius * 2; h++)
         {
-            for (int h = 0; h < radius * 2; h++)
+            for (int w = 0; w < radius * 2; w++)
             {
                 int dx = radius - w; // horizontal offset
                 int dy = radius - h; // vertical offset
-                if ((dx * dx + dy * dy) < (radius * radius) && (x + dx < grid->width) && (x + dx > -1) && (y + dy < grid->height) && (y + dy > -1))
+                // if ((dx * dx + dy * dy) < (radius * radius) && (x + dx < grid->width) && (x + dx > -1) && (y + dy < grid->height) && (y + dy > -1))
+                if((x + dx < grid->width) && (x + dx > -1) && (y + dy < grid->height) && (y + dy > -1))
                 {
                     memcpy(grid->pixels[(y + dy) * grid->width + (x + dx)].colour, NO_PIXEL_COLOUR, sizeof(grid->pixels[(y + dy) * grid->width + (x + dx)].colour));
                     if(grid->pixels[(y + dy) * grid->width + (x + dx)].parent_body != -1) {
@@ -161,7 +162,7 @@ ivector2 get_start_point(list* pixel_coords) {
 //Actual marching squares method.
 list *marching_squares(list *pixel_coords, world_grid *grid, int32_t id) {
     ivector2 start_point = get_start_point(pixel_coords);//get_value(pixel_coords, ivector2, 0);
-    printf("Start point: (%i, %i)\n", start_point.x, start_point.y);
+    printf("Marching Sqaures start point: (%i, %i)\n", start_point.x, start_point.y);
     list *contour_points = list_alloc(pixel_coords->size, sizeof(ivector2));
     //If the texture is filled on the LHS, we will end up with 15 as our first currentSquare.
     //To avoid this, we simply offset startPoint one to the left, to get 12 as our currentSquare,

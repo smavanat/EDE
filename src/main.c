@@ -202,18 +202,22 @@ int main(int argc, char** argv) {
 
                 glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
                 glClear(GL_COLOR_BUFFER_BIT);
+                // printf("\n\n");
+                // printf("================ NEW FRAME ==============\n");
                 world_update(w, dt);
                 render_begin_pixel_frame(pRenderer);
                 for(int i = 0; i < grid->height * grid->width; i++) {
                     draw_pixel(pRenderer, i, grid->pixels[i].colour);
                 }
                 render_end_pixel_frame(pRenderer);
-                // render_draw_point(dRenderer, (vector2){-1.0f, -1.0f}, (vector4){0.0f, 0.0f, 1.0f, 1.0f});
-                // render_draw_line(dRenderer, (vector2){0.0f, 0.0f}, (vector2){100.0, 100.0}, (vector4){1.0f, 0.0f, 0.0f, 1.0f});
-                // render_draw_quad(dRenderer, &(quad){10.0f, 10.0f, 100.0f, 100.0f}, (vector4){1.0f, 0.0f, 0.0f, 1.0f});
-                // render_draw_circle(dRenderer, (vector2){50.0f, 50.0f}, 20.0f, (vector4){1.0f, 0.0f, 0.0f, 1.0f});
                 debug_render_flush(dRenderer);
                 b2World_Step(w->world_id, 1.0f/60.0f, 4);
+
+                //Need to draw a quad representing the erasure area
+                double cursor_x, cursor_y;
+                glfwGetCursorPos(gw, &cursor_x, &cursor_y);
+                vector2 erasing_dimensions[] = {(vector2){cursor_x - (1 * PIXEL_SIZE), cursor_y - (2 * PIXEL_SIZE)}, (vector2){cursor_x - (1 * PIXEL_SIZE), cursor_y + (2 * PIXEL_SIZE)}, (vector2){cursor_x + (3 * PIXEL_SIZE), cursor_y + (2 * PIXEL_SIZE)}, (vector2){cursor_x + (3 * PIXEL_SIZE), cursor_y - (2 * PIXEL_SIZE)}};
+                render_draw_quad(dRenderer, erasing_dimensions, (vector4){98 / 256.0, 17 / 256.0, 156 / 256.0, 1.0});
 
                 //check and call events and swap the buffers
                 glfwSwapBuffers(gw);

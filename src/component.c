@@ -164,12 +164,9 @@ typedef struct {
 
 bool IsConvex(vector2 *p1, vector2 *p2, vector2 *p3) {
     double tmp;
-    tmp = (p3->y - p1->y) * (p2->x - p1->x) - (p3->x - p1->x) * (p2->y - p1->y);
-    if (tmp > 0) {
-        return 1;
-    }
-    return 0;
-
+    // tmp = (p3->y - p1->y) * (p2->x - p1->x) - (p3->x - p1->x) * (p2->y - p1->y);
+    tmp = (p2->x - p1->x)*(p3->y - p1->y) - (p2->y - p1->y)*(p3->x - p1->x);
+    return tmp > 0;
 }
 
 bool InCone(vector2 *p1, vector2 *p2, vector2 *p3, vector2 *p) {
@@ -194,47 +191,43 @@ bool InCone(vector2 *p1, vector2 *p2, vector2 *p3, vector2 *p) {
     }
 }
 
-int Intersects(vector2 *p11, vector2 *p12, vector2 *p21, vector2 *p22) {
-    if ((p11->x == p21->x) && (p11->y == p21->y)) {
+double orient(vector2 *a, vector2 *b, vector2 *c)
+{
+    return (b->x - a->x)*(c->y - a->y) -
+           (b->y - a->y)*(c->x - a->x);
+}
+
+bool onSegment(vector2 *a, vector2 *b, vector2 *c)
+{
+    return fmin(a->x,b->x) <= c->x && c->x <= fmax(a->x,b->x) &&
+           fmin(a->y,b->y) <= c->y && c->y <= fmax(a->y,b->y);
+}
+
+int Intersects(vector2 *p1, vector2 *p2,
+               vector2 *p3, vector2 *p4)
+{
+    // ignore shared endpoints
+    if ((p1->x == p3->x && p1->y == p3->y) ||
+        (p1->x == p4->x && p1->y == p4->y) ||
+        (p2->x == p3->x && p2->y == p3->y) ||
+        (p2->x == p4->x && p2->y == p4->y))
         return 0;
-    }
-    if ((p11->x == p22->x) && (p11->y == p22->y)) {
-        return 0;
-    }
-    if ((p12->x == p21->x) && (p12->y == p21->y)) {
-        return 0;
-    }
-    if ((p12->x == p22->x) && (p12->y == p22->y)) {
-        return 0;
-    }
 
-    vector2 v1ort, v2ort, v;
-    double dot11, dot12, dot21, dot22;
+    double o1 = orient(p1,p2,p3);
+    double o2 = orient(p1,p2,p4);
+    double o3 = orient(p3,p4,p1);
+    double o4 = orient(p3,p4,p2);
 
-    v1ort.x = p12->y - p11->y;
-    v1ort.y = p11->x - p12->x;
+    if (o1*o2 < 0 && o3*o4 < 0)
+        return 1;
 
-    v2ort.x = p22->y - p21->y;
-    v2ort.y = p21->x - p22->x;
+    // collinear cases
+    if (o1 == 0 && onSegment(p1,p2,p3)) return 1;
+    if (o2 == 0 && onSegment(p1,p2,p4)) return 1;
+    if (o3 == 0 && onSegment(p3,p4,p1)) return 1;
+    if (o4 == 0 && onSegment(p3,p4,p2)) return 1;
 
-    v = (vector2){p21->x - p11->x, p21->y - p11->y};
-    dot21 = v.x * v1ort.x + v.y * v1ort.y;
-    v = (vector2){p22->x - p11->x, p22->y - p11->y};
-    dot22 = v.x * v1ort.x + v.y * v1ort.y;
-
-    v = (vector2){p11->x - p21->x, p11->y - p21->y};
-    dot11 = v.x * v2ort.x + v.y * v2ort.y;
-    v = (vector2){p12->x - p21->x, p12->y - p21->y};
-    dot12 = v.x * v2ort.x + v.y * v2ort.y;
-
-  if (dot11 * dot12 > 0) {
     return 0;
-  }
-  if (dot21 * dot22 > 0) {
-    return 0;
-  }
-
-  return 1;
 }
 
 int triangulate_opt(vector2 *poly, int n, list *triangles) {
@@ -317,7 +310,7 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
     dpstates[n - 1][0].weight = 0;
     dpstates[n - 1][0].bestvertex = -1;
 
-    minweight = DBL_MAX;
+    // minweight = DBL_MAX;
     for (gap = 2; gap < n; gap++) {
         for (i = 0; i < (n - gap); i++) {
             j = i + gap;
@@ -326,6 +319,7 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
                 continue;
             }
             bestvertex = -1;
+            minweight = DBL_MAX;
             for (k = (i + 1); k < j; k++) {
                 if (!dpstates[k][i].visible) {
                     // printf("DPStates at [k][i] is not visible\n");
@@ -412,6 +406,7 @@ b2BodyId create_polygon_collider(vector2* points, int pointsSize, vector2 center
     for(int i = 0; i < pointsSize; i++) {
         b2_points[pointsSize - i - 1] = (vector2){(points[i].x - center.x + 1) *PIXELS_TO_METRES, (points[i].y-center.y + 1) *PIXELS_TO_METRES};
     }
+    printf("Points to partition: \n");
     for(int i = 0; i < pointsSize; i++) {
         printf("(%f, %f) ", b2_points[i].x, b2_points[i].y);
     }
@@ -437,6 +432,7 @@ b2BodyId create_polygon_collider(vector2* points, int pointsSize, vector2 center
     int result = triangulate_opt(b2_points, pointsSize, triangle_list); //Traingulate the polygon shape
     printf("Result: %i, ", result);
     printf("Number of triangles generated: %lu\n", triangle_list->size);
+    printf("Triangle Vertices: \n");
     for(int i = 0; i < triangle_list->size; i++) {
         triangle_polygon t = get_value(triangle_list, triangle_polygon, i);
         for(int j = 0; j < 3; j++) {
