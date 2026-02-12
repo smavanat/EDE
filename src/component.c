@@ -5,24 +5,44 @@
 #include <stdlib.h>
 #include <string.h>
 
-transform *create_transform(vector2 position, float zIndex, float angle) {
+/**
+ * Creates a new transform component
+ * @param position the position of the transform
+ * @param zIndex the z-index of the transform
+ * @param rotation the rotation of the transform
+ * @return a pointer to the created transform component
+ */
+transform *create_transform(vector2 position, float zIndex, float rotation) {
     transform *t = malloc(sizeof(transform));
-    t->angle = angle;
+    t->rotation = rotation;
     t->zIndex = zIndex;
     t->position = position;
     return t;
 }
 
+/**
+ * Destroys an existing transform component
+ * @param t a pointer to an existing transform component
+ */
 void free_transform(void *t) {
     transform *tr = (transform *) t;
     tr->position = (vector2){0,0};
-    tr->angle = 0;
+    tr->rotation = 0;
     tr->zIndex = 0;
 }
 
+/**
+ * Creates a new sprite component
+ * @param texture an int representing the OpenGL texture id of the texture assigned to this sprite
+ * @param coords an array representing the rectangular coordinates of this texture (assuming center is (0,0))
+ * @param colours an array representing the colours of the texture
+ * @param uv an array representing the OpenGL (u,v) coords of the texture
+ * @return a pointer to the created sprite component
+ */
 sprite *create_sprite(unsigned int texture, vector2 coords[4], vector4 colours[4], vector2 uv[4]) {
     sprite *spr = malloc(sizeof(sprite));
     spr->texture = texture;
+    //Need to do memcpy as they are arrays
     memcpy(spr->colours, colours, sizeof(spr->colours));
     memcpy(spr->coords, coords, sizeof(spr->coords));
     memcpy(spr->uv, uv, sizeof(spr->uv));
@@ -30,11 +50,23 @@ sprite *create_sprite(unsigned int texture, vector2 coords[4], vector4 colours[4
     return spr;
 }
 
+/**
+ * Destroys an existing sprite component
+ * @param spr a pointer to a sprite component
+ */
 void free_sprite(void *spr) {
     sprite *s = (sprite *)spr;
-    glDeleteTextures(1, &s->texture);
+    glDeleteTextures(1, &s->texture); //Need to delete the OpenGL texture
 }
 
+/**
+ * Creates a new circle collider
+ * @param center the center of the circle in pixels
+ * @param radius the radius of the circle in pixels
+ * @param worldId the id of the box2d world we are creating the collider in
+ * @param type the type (dynamic, static, etc.) of collider we should be creating
+ * @return the id of the box2d body that was created
+ */
 b2BodyId create_circle_collider(vector2 center, float radius, b2WorldId worldId, b2BodyType type) {
     //Default shape initialisation code
     b2BodyDef retBodyDef = b2DefaultBodyDef();
@@ -50,6 +82,16 @@ b2BodyId create_circle_collider(vector2 center, float radius, b2WorldId worldId,
     return retId;
 }
 
+/**
+ * Creates a new box collider
+ * @param center the center of the box in pixels
+ * @param width the width of the box in pixels
+ * @param height the height of the box in pixels
+ * @param rotation the rotation of the box in radians
+ * @param worldId the id of the box2d world we are creating the collider in
+ * @param type the type (dynamic, static, etc.) of collider we should be creating
+ * @return the id of the box2d body that was created
+ */
 b2BodyId create_box_collider(vector2 center, int width, int height, float rotation, b2WorldId worldId, b2BodyType type) {
     //Default shape initialisation code
     b2BodyDef retBodyDef = b2DefaultBodyDef();
@@ -59,13 +101,23 @@ b2BodyId create_box_collider(vector2 center, int width, int height, float rotati
     b2BodyId retId = b2CreateBody(worldId, &retBodyDef);
 
     //Box creation
-    b2Polygon box = b2MakeBox((width/2.0f)*PIXELS_TO_METRES, (height/2.0f)*PIXELS_TO_METRES);
+    b2Polygon box = b2MakeBox((width/2.0f)*PIXELS_TO_METRES, (height/2.0f)*PIXELS_TO_METRES); //Need to do half-widths because that's what box2d specifies for some reason
     b2ShapeDef sd = b2DefaultShapeDef();
     b2CreatePolygonShape(retId, &sd, &box);
 
     return retId;
 }
 
+/**
+ * Creates a new capsule collider
+ * @param center1 the first center of the capsule in pixels
+ * @param center2 the second center of the capsule in pixels
+ * @param radius the radius of both of the centers in pixels
+ * @param rotation the rotation of the capsule in radians
+ * @param worldId the id of the box2d world we are creating the collider in
+ * @param type the type (dynamic, static, etc.) of collider we should be creating
+ * @return the id of the box2d body that was created
+ */
 b2BodyId create_capsule_collider(vector2 center1, vector2 center2, float radius, float rotation, b2WorldId worldId, b2BodyType type) {
     //Calculate actual center of the capsule
     vector2 center = (vector2){(center2.x - center1.x)/2.0f, (center2.y - center1.y)/2.0f};
@@ -85,7 +137,12 @@ b2BodyId create_capsule_collider(vector2 center1, vector2 center2, float radius,
     return retId;
 }
 
-//Finds the center of a shape assuming that it has been partitioned into triangles
+
+/**
+ * Finds the weighted center of a shape assuming that it has been partitioned into triangles
+ * @param shapes a pointer to a list of traingle_polygon representing the traingles the shape has been partitioned into
+ * @returns a vector2 representing the weighted center of the shape made up of these triangles
+ */
 vector2 ComputeWeightedCompoundCentroid(list *shapes) {
     vector2 weightedCentroid = {0.0f, 0.0f};
     float totalArea = 0.0f;
@@ -96,7 +153,7 @@ vector2 ComputeWeightedCompoundCentroid(list *shapes) {
         vector2 b = get_value(shapes, triangle_polygon, i).points[i];
         vector2 c = get_value(shapes, triangle_polygon, i).points[i];
 
-        //Getting the centroid
+        //Getting the centroid of the triangle
         vector2 centroid = (vector2){(a.x + b.x + c.x) / 3.0f, (a.y + b.y + c.y) / 3.0f};
 
         //Getting the area
@@ -116,11 +173,15 @@ vector2 ComputeWeightedCompoundCentroid(list *shapes) {
     return weightedCentroid;
 }
 
-//Calculates the unweighted centroid of a shape by just finding the center of its bounding box
+/**
+ * Calculates the unweighted centroid of a shape by just finding the center of its bounding box
+ * @param shapes a pointer to a list of traingle_polygon representing the traingles the shape has been partitioned into
+ * @returns a vector2 representing the unweighted center of the shape made up of these triangles
+ */
 vector2 ComputeCompoundCentroid(list *shapes) {
-    //Get the bounding box:
-    double minX = 0.0, minY = 0.0, maxX = 0.0, maxY = 0.0;
+    double minX = DBL_MAX, minY = DBL_MAX, maxX = DBL_MIN, maxY = DBL_MIN;
 
+    //Get the bounding box:
     for(int i = 0; i < shapes->size; i++) {
         triangle_polygon tp = get_value(shapes, triangle_polygon, i);
         for (int j = 0; j < 3; j++) {
@@ -133,9 +194,13 @@ vector2 ComputeCompoundCentroid(list *shapes) {
     return (vector2){minX + (maxX-minX)/2.0f, minY + (maxY-minY)/2.0f};
 }
 
-//Centers a shape around its unweighted centroid
-void CenterCompundShape(list *shapes) {
-    vector2 compoundCentroid = ComputeCompoundCentroid(shapes); //I THINK THE COMPOUND CENTROID IS WRONG
+/**
+ * Centers a shape paritioned into triangles around its centroid
+ * @param shapes a pointer to a list of traingle_polygon representing the traingles the shape has been partitioned into
+ * @param weighted whether the centroid should be weighted on unweighted
+ */
+void CenterCompundShape(list *shapes, bool weighted) {
+    vector2 compoundCentroid = weighted ? ComputeWeightedCompoundCentroid(shapes) : ComputeCompoundCentroid(shapes);
 
     for (int i = 0; i < shapes->size; i++) {
         triangle_polygon tp = get_value(shapes, triangle_polygon, i);
@@ -147,65 +212,104 @@ void CenterCompundShape(list *shapes) {
 }
 
 /**
+ * POLYGON PARTITIONING
  * These functions are modified versions of those that can be found in the polypartition library: https://github.com/ivanfratric/polypartition
  * They have been modified to work in C rather than in C++.
  */
 
+//Holds a state entry for the dynamic programming table
+//Where i, j means this is the entry at index [j][i]
 typedef struct {
-    bool visible;
-    double weight;
-    long bestvertex;
+    bool visible; //Whether diagonal (i, j) is valid
+    double weight; //Minimum triangulation cost between (i, j)
+    long bestvertex; //best splitting vertex k
 } DPState;
 
+/**
+ * Holds two points on a diagonal
+ */
 typedef struct {
     long index1;
     long index2;
 } Diagonal;
 
-bool IsConvex(vector2 *p1, vector2 *p2, vector2 *p3) {
+/**
+ * Checks if the line formed by these three points is convex or not
+ * @param p1 the first point in the line
+ * @param p2 the second point in the line
+ * @param p3 the third point in the line
+ * @return whether the line is convex or not
+ */
+bool is_convex(vector2 *p1, vector2 *p2, vector2 *p3) {
     double tmp;
     // tmp = (p3->y - p1->y) * (p2->x - p1->x) - (p3->x - p1->x) * (p2->y - p1->y);
     tmp = (p2->x - p1->x)*(p3->y - p1->y) - (p2->y - p1->y)*(p3->x - p1->x);
     return tmp > 0;
 }
 
-bool InCone(vector2 *p1, vector2 *p2, vector2 *p3, vector2 *p) {
-  bool convex = IsConvex(p1, p2, p3);
+/**
+ * Checks if p lies in the cone formed by the lines p2 -> p1 and p2 -> p3
+ * @param p1 the first point in the cone
+ * @param p2 the middle point of the cone
+ * @param p3 the third point in the cone
+ * @param p the point being checked
+ * @return true if p is in the cone, false otherwise
+ */
+bool in_cone(vector2 *p1, vector2 *p2, vector2 *p3, vector2 *p) {
+  bool convex = is_convex(p1, p2, p3);
 
     if (convex) {
-        if (!IsConvex(p1, p2, p)) {
+        if (!is_convex(p1, p2, p)) {
             return false;
         }
-        if (!IsConvex(p2, p3, p)) {
+        if (!is_convex(p2, p3, p)) {
             return false;
         }
         return true;
     } else {
-        if (IsConvex(p1, p2, p)) {
+        if (is_convex(p1, p2, p)) {
             return true;
         }
-        if (IsConvex(p2, p3, p)) {
+        if (is_convex(p2, p3, p)) {
             return true;
         }
         return false;
     }
 }
 
-double orient(vector2 *a, vector2 *b, vector2 *c)
-{
+/**
+ * Computes the signed area between three points
+ * @param a a vector2 representing the first point
+ * @param b a vector2 representing the second point
+ * @param c a vector2 representing the third point
+ * @return the signed area between these points
+ */
+double orient(vector2 *a, vector2 *b, vector2 *c) {
     return (b->x - a->x)*(c->y - a->y) -
            (b->y - a->y)*(c->x - a->x);
 }
 
-bool onSegment(vector2 *a, vector2 *b, vector2 *c)
-{
+/**
+ * Checks whether c lies on the line segment from a to b using AABB
+ * @param a the first point of the line segment
+ * @param b the second point of the line segment
+ * @param c the point being tested
+ * @return true if c lies on the line segment, false otherwise
+ */
+bool onSegment(vector2 *a, vector2 *b, vector2 *c) {
     return fmin(a->x,b->x) <= c->x && c->x <= fmax(a->x,b->x) &&
            fmin(a->y,b->y) <= c->y && c->y <= fmax(a->y,b->y);
 }
 
-int Intersects(vector2 *p1, vector2 *p2,
-               vector2 *p3, vector2 *p4)
-{
+/**
+ * Determines whether two line segments intersect
+ * @param p1 the start point of the first line segment
+ * @param p2 the end point of the first line segment
+ * @param p3 the start point of the second line segment
+ * @param p4 the end point of the second line segment
+ * @returns 1 if they intersect, 0 otherwise
+ */
+int intersects(vector2 *p1, vector2 *p2, vector2 *p3, vector2 *p4) {
     // ignore shared endpoints
     if ((p1->x == p3->x && p1->y == p3->y) ||
         (p1->x == p4->x && p1->y == p4->y) ||
@@ -230,9 +334,17 @@ int Intersects(vector2 *p1, vector2 *p2,
     return 0;
 }
 
+/**
+ * Computes the optimal triangulation of a polygon without holes using dynamic programming.
+ * Optimal in this case means the triangulation that minimises the total length of the added diagonals
+ * @param poly the points of the polygon to triangulate. Must be in CCW order
+ * @param n the number of points in the polygon
+ * @param triangles a list where all the triangles are placed after traingulation
+ * @return 1 on success, 0 on failure
+ */
 int triangulate_opt(vector2 *poly, int n, list *triangles) {
     long i, j, k, gap;
-    DPState **dpstates = NULL;
+    DPState **dpstates = NULL; //Dynamic programming table
     vector2 p1, p2, p3, p4;
     long bestvertex;
     double weight, minweight, d1, d2;
@@ -246,7 +358,7 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
         dpstates[i] = malloc(sizeof(DPState) * i);
     }
 
-    // Initialize states and visibility.
+    // Initialize states and visibility before starting dynamic programming
     for (i = 0; i < (n - 1); i++) {
         p1 = poly[i];
         for (j = i + 1; j < n; j++) {
@@ -256,7 +368,7 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
             if (j != (i + 1)) {
                 p2 = poly[j];
 
-                // Visibility check.
+                // Visibility check. Checks that the diagonal lies inside the polygon angle
                 if (i == 0) {
                     p3 = poly[n - 1];
                 } else {
@@ -267,7 +379,7 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
                 } else {
                     p4 = poly[i + 1];
                 }
-                if (!InCone(&p3, &p1, &p4, &p2)) {
+                if (!in_cone(&p3, &p1, &p4, &p2)) {
                     // printf("Not incone\n");
                     dpstates[j][i].visible = false;
                     continue;
@@ -283,7 +395,7 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
                 } else {
                     p4 = poly[j + 1];
                 }
-                if (!InCone(&p3, &p2, &p4, &p1)) {
+                if (!in_cone(&p3, &p2, &p4, &p1)) {
                     // printf("Not incone\n");
                     dpstates[j][i].visible = false;
                     continue;
@@ -296,7 +408,8 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
                     } else {
                         p4 = poly[k + 1];
                     }
-                    if (Intersects(&p1, &p2, &p3, &p4)) {
+                    //Checks that the diagonal does not intersect with a polygon edge
+                    if (intersects(&p1, &p2, &p3, &p4)) {
                         // printf("Vertices intersect\n");
                         dpstates[j][i].visible = false;
                         break;
@@ -310,17 +423,19 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
     dpstates[n - 1][0].weight = 0;
     dpstates[n - 1][0].bestvertex = -1;
 
-    // minweight = DBL_MAX;
+    //Start dynamic programming
     for (gap = 2; gap < n; gap++) {
         for (i = 0; i < (n - gap); i++) {
             j = i + gap;
-            if (!dpstates[j][i].visible) {
+            if (!dpstates[j][i].visible) { //If the diagonal at this entry is not inside the polygon, continue
                 // printf("DPStates at [j][i] is not visible\n");
                 continue;
             }
             bestvertex = -1;
             minweight = DBL_MAX;
+            //Try all possible splits for a diagonal
             for (k = (i + 1); k < j; k++) {
+                //Ignore splits that are not in the polygon
                 if (!dpstates[k][i].visible) {
                     // printf("DPStates at [k][i] is not visible\n");
                     continue;
@@ -330,6 +445,7 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
                     continue;
                 }
 
+                //Pick the k that minimises the total weight of all added diagonals
                 if (k <= (i + 1)) {
                     d1 = 0;
                 } else {
@@ -350,7 +466,6 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
                 }
             }
             if (bestvertex == -1) {
-                // printf("Best Vertex is -1 (352)\n");
                 for (i = 1; i < n; i++) {
                     free(dpstates[i]);
                 }
@@ -364,6 +479,7 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
         }
     }
 
+    //Reconstruct the triangulation after dynamic programming
     newdiagonal.index1 = 0;
     newdiagonal.index2 = n - 1;
     enqueue(diagonals, Diagonal, newdiagonal);
@@ -373,7 +489,6 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
         if(!ok) break;
         bestvertex = dpstates[diagonal.index2][diagonal.index1].bestvertex;
         if (bestvertex == -1) {
-            // printf("Best Vertex is -1 (377)\n");
             ret = 0;
             break;
         }
@@ -400,14 +515,25 @@ int triangulate_opt(vector2 *poly, int n, list *triangles) {
     return ret;
 }
 
-b2BodyId create_polygon_collider(vector2* points, int pointsSize, vector2 center, float rotation, b2WorldId worldId, b2BodyType type) {
+/**
+ * Creates a polygon collider from a set of points by triangulating them
+ * @param points the set of points that make up the polygon in CCW order in pixels
+ * @param points_size the number of points in the polygon
+ * @param center the center that the collider should be placed at in pixels
+ * @param rotation the rotation of the collider in radians
+ * @param worldId the id of the box2d world we are using for the collider
+ * @param type the box2d type of the collider
+ * @return the box2d b2BodyId of the collider
+ */
+b2BodyId create_polygon_collider(vector2* points, int points_size, vector2 center, float rotation, b2WorldId worldId, b2BodyType type) {
     printf("Center: (%f, %f)\n", center.x, center.y);
-    vector2 *b2_points = malloc(sizeof(vector2) * pointsSize);
-    for(int i = 0; i < pointsSize; i++) {
-        b2_points[pointsSize - i - 1] = (vector2){(points[i].x - center.x + 1) *PIXELS_TO_METRES, (points[i].y-center.y + 1) *PIXELS_TO_METRES};
+    //Converting the points to metre units from pixel ones
+    vector2 *b2_points = malloc(sizeof(vector2) * points_size);
+    for(int i = 0; i < points_size; i++) {
+        b2_points[points_size - i - 1] = (vector2){(points[i].x - center.x + 1) *PIXELS_TO_METRES, (points[i].y-center.y + 1) *PIXELS_TO_METRES};
     }
     printf("Points to partition: \n");
-    for(int i = 0; i < pointsSize; i++) {
+    for(int i = 0; i < points_size; i++) {
         printf("(%f, %f) ", b2_points[i].x, b2_points[i].y);
     }
     printf("\n");
@@ -429,7 +555,7 @@ b2BodyId create_polygon_collider(vector2* points, int pointsSize, vector2 center
     list *triangle_list = list_alloc(10, sizeof(triangle_polygon));
 
     //Need to set it to be oriented Counter-Clockwise otherwise the triangulation algorithm fails.
-    int result = triangulate_opt(b2_points, pointsSize, triangle_list); //Traingulate the polygon shape
+    int result = triangulate_opt(b2_points, points_size, triangle_list); //Traingulate the polygon shape
     printf("Result: %i, ", result);
     printf("Number of triangles generated: %lu\n", triangle_list->size);
     printf("Triangle Vertices: \n");
@@ -458,17 +584,28 @@ b2BodyId create_polygon_collider(vector2* points, int pointsSize, vector2 center
             b2Shape_SetFriction(testShapeId, 0.3);
         }
     }
-    printf("Center after creation: (%f, %f)\n", retBodyDef.position.x * METRES_TO_PIXELS, retBodyDef.position.y * METRES_TO_PIXELS);
+    // printf("Center after creation: (%f, %f)\n", retBodyDef.position.x * METRES_TO_PIXELS, retBodyDef.position.y * METRES_TO_PIXELS);
+    //Cleanup
     free_list(triangle_list);
     free(b2_points);
     return retId;
 }
 
+/**
+ * Destroys an existing collider component
+ * @param c a pointer to a collider component
+ */
 void free_collider(void *c) {
     collider *col = (collider *)c;
     b2DestroyBody(col->collider_id);
 }
 
+/**
+ * Rotates a point by an angle
+ * @param vector the point to rotate
+ * @param angle the angle to rotate it by in radians
+ * @return a new vector representing the rotated point
+ */
 vector2 rotate_translate(vector2* vector, float angle) {
     vector2 tmp;
     tmp.x = vector->x * cos(angle) - vector->y * sin(angle);
@@ -476,7 +613,14 @@ vector2 rotate_translate(vector2* vector, float angle) {
     return tmp;
 }
 
+/**
+ * Draws collider outlines for debugging purposes
+ * @param c a pointer to the collider whose outline needs to be drawn
+ * @param dRenderer a pointer to the debug_renderer doing the drawing
+ * @param colour the colour of the outline
+ */
 void draw_collider(collider *c, debug_renderer *dRenderer, vector4 colour) {
+    //Getting the shapes in the collider
     int shapeCount = b2Body_GetShapeCount(c->collider_id);
     vector2 colliderPosition = b2Body_GetPosition(c->collider_id);
     b2ShapeId* colliderShapes = malloc(sizeof(b2ShapeId) * shapeCount);
@@ -530,6 +674,10 @@ void draw_collider(collider *c, debug_renderer *dRenderer, vector4 colour) {
     free(colliderShapes);
 }
 
+/**
+ * Destroys an existing rigidbody component
+ * @param rb a pointer to a rigidbody component
+ */
 void free_rigidbody(void *rb) {
     rigidbody *r = (rigidbody *)rb;
     free(r->pixel_coords);

@@ -14,6 +14,7 @@ typedef struct {
 #define METRES_TO_PIXELS 50.0f
 #define PIXELS_TO_METRES 1.0f / METRES_TO_PIXELS
 
+//Enum for differentiating between the different component types
 typedef enum{
     TRANSFORM,
     SPRITE,
@@ -24,6 +25,7 @@ typedef enum{
     NUM_COMPONENTS //Used for counting the number of components
 } component_type;
 
+//Enum for differentiating between the different collider types
 typedef enum{
     BOX,
     CIRCLE,
@@ -35,14 +37,13 @@ typedef enum{
 typedef struct {
     vector2 position;
     float zIndex;
-    float angle;
+    float rotation;
 } transform;
 
 transform *create_transform(vector2 position, float zIndex, float angle);
 void free_transform(void *t);
 
-//Needs to be filled in later once OpenGL is setup
-//Holds destructible sprite texture data
+//Holds OpenGL texture data
 typedef struct {
     unsigned int texture;
     vector2 coords[4];
@@ -53,7 +54,6 @@ typedef struct {
 sprite *create_sprite(unsigned int texture, vector2 coords[4], vector4 colours[4], vector2 uv[4]);
 void free_sprite(void *spr);
 
-//Needs to be finished once box2D is setup
 //Holds the b2BodyId of a box2D collider alongside what kind of collider it is
 typedef struct {
     collider_type type;
