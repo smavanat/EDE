@@ -68,7 +68,7 @@ vector2 rotate(vector2* vec, double angle, bool inRadians);
  * @param in_radians true if angle has been provided in radians. false otherwise
  * @return the rotated vector
  */
-vector2 rotateAboutPoint(vector2* point, vector2* centre, double angle, bool inRadians);
+vector2 rotate_about_point(vector2* point, vector2* centre, double angle, bool inRadians);
 /**
  * Checks if two vectors are the same by seeing if their constituent parts are the same
  * @param a the first vector to compare

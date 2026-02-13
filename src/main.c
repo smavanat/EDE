@@ -27,8 +27,7 @@ GLFWwindow *gw = NULL;
 world_grid *grid = NULL;
 
 //TODO: Need to make the list in the world that holds all the systems a priority queue so we can order the systems properly
-//      Fix bug where small rigidbodies do not get assigned colliders
-//      Fix the really weird bug where small colliders rotate but the rigidbodies just awkwardly stay in place
+//      Fix the really weird bug where small colliders rotate but the rigidbodies just awkwardly stay in place - think its just that rigidbodies are not being updated with rotation
 //      If a rigidbody drops to one pixel, just delete that rigidbody and treat the pixel as part of the pixel simulation
 //      Should just make two world grid buffers that we swap instead of constantly mallocing new ones
 //NOTE: ALL RIGIDBODIES NEED TO HAVE EVEN DIMENSIONS TO ENSURE WE DON'T GET WEIRD HALF-PIXEL OFFSETS

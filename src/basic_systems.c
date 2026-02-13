@@ -60,7 +60,7 @@ void rigidbody_system_update(plaza *p, ecs_system *s, float dt) {
             //Iterate over every pixel associated with a ridbody
             for(int p = 0; p < rigidbody->pixel_count; p++) {
                 vector2 old_pos = ivec_to_vec(rigidbody->pixel_coords[p]); //Get its position in the previous frame
-                vector2 rotated_pos = rotateAboutPoint(&old_pos, &(vector2){0,0}, t->rotation, 1); //Update its position based on the transform rotation
+                vector2 rotated_pos = rotate_about_point(&old_pos, &(vector2){0,0}, t->rotation, 1); //Update its position based on the transform rotation
                 ivector2 new_pos = (ivector2){floor(rotated_pos.x + t->position.x + 0.5), floor(rotated_pos.y + t->position.y + 0.5)}; //Update its position based on the transform position
                 if(new_pos.x < new_grid->width && new_pos.x >= 0 && new_pos.y < new_grid->height && new_pos.y >= 0) { //If the new position is in the visible region of the grid
                     //Copy over the pixel data to the new position
@@ -101,7 +101,7 @@ void rigidbody_system_update(plaza *p, ecs_system *s, float dt) {
 
             //Get the relative position of the pixel to the rigidbody that is stored in the rigidbody struct
             vector2 d = {(get_value(rb_list, ivector2, i).x - t->position.x), (get_value(rb_list, ivector2, i).y - t->position.y)};
-            vector2 rotated_pos = rotateAboutPoint(&d, &(vector2){0,0}, -t->rotation, 1);
+            vector2 rotated_pos = rotate_about_point(&d, &(vector2){0,0}, -t->rotation, 1);
             ivector2 rel_pos = (ivector2){(int)floorf(rotated_pos.x + 0.5f), (int)floorf(rotated_pos.y + 0.5f)};
 
             //Check if that relative position is stored in the rigidbody struct
@@ -146,7 +146,7 @@ void physics_system_update(plaza *p, ecs_system *s, float dt) {
 
             //Set the transform position and rotation to be the collider position and rotation
             vector2 temp = b2Body_GetPosition(c->collider_id);
-            t->rotation = normalizeAngle(b2Rot_GetAngle(b2Body_GetRotation(c->collider_id)))/DEGREES_TO_RADIANS;
+            t->rotation = normalise_angle(b2Rot_GetAngle(b2Body_GetRotation(c->collider_id)))/DEGREES_TO_RADIANS;
             t->position = (vector2){temp.x*METRES_TO_PIXELS, temp.y * METRES_TO_PIXELS};
         }
     }
