@@ -16,6 +16,7 @@ void grow(list *slice, size_t size) {
     if(slice->size > 0) {
         memcpy(data, slice->data, slice->size*size);
     }
+    free(slice->data); //Get rid of the old buffer
     slice->data = data;//Swap the buffers
     slice->capacity = new_capacity; //Update the capacity
 }
@@ -27,9 +28,9 @@ void grow(list *slice, size_t size) {
  * @return a pointer to the created list on the heap
  */
 list *list_alloc(size_t arr_size, size_t t_size) {
-    size_t numBytes = sizeof(list) + (arr_size * t_size);
+    size_t numBytes = sizeof(list);
     list * l = malloc(numBytes);
-    l->data = (void*)(l+1);
+    l->data = malloc(arr_size * t_size);
     l->size = 0;
     l->capacity = arr_size;
 
@@ -42,7 +43,7 @@ list *list_alloc(size_t arr_size, size_t t_size) {
  */
 void free_list(list *l) {
     if(!l) return; //Early exit on null pointer
-    // free(l->data);
+    free(l->data);
     free(l);
 }
 

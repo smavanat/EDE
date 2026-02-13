@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "../include/maths.h"
 #include "../include/world.h"
+//INCOMPLETE
 
 #define CHUNK_GRID_WIDTH 64 //Width of a grid contained in a chunk
 #define CHUNK_GRID_HEIGH 64 //Height of a grid contained in a chunk
@@ -51,6 +52,10 @@ typedef struct {
 //     LEFT
 // } addition_direction;
 
+/**
+ * Initialisation function for a chunk_manager
+ * @return a pointer to the created chunk_manager class on the heap
+ */
 chunk_manager *create_chunk_manager(void);
 chunk_manager *load_chunk_manager(void);
 int *write_chunk_manager(chunk_manager *cm);

@@ -6,8 +6,13 @@
 #include <sys/types.h>
 #include"../include/stb_image.h"
 
-//Allocate the renderer and assign its variables
-void render_init(renderer *r, char *vertPath, char *fragPath) {
+/**
+ * Allocate the renderer and assign its variables
+ * @param r a pointer to the renderer to allocate
+ * @param vert_path the path to load the vertex shader for the renderer from
+ * @param frag_path the path to load the fragment shader for the renderer from
+ */
+void render_init(renderer *r, char *vert_path, char *frag_path) {
     //Getting the vao
     glGenVertexArrays(1, &r->vao);
     glBindVertexArray(r->vao);
@@ -33,7 +38,7 @@ void render_init(renderer *r, char *vertPath, char *fragPath) {
     glEnableVertexAttribArray(3);
 
     //Getting the shader for this renderer
-    r->shader = load_shader(vertPath, fragPath);
+    r->shader = load_shader(vert_path, frag_path);
 
     //Setting the projection matrix
     glm_ortho(0.0f, SCREEN_WIDTH, SCREEN_HEIGHT, 0.0f, -1.0f, 1.0f, r->projection);
@@ -46,26 +51,38 @@ void render_init(renderer *r, char *vertPath, char *fragPath) {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
-//Destroying the renderer
+/**
+ * Freeing the renderer
+ * @param r a pointer to the renderer to free
+ */
 void render_free(renderer *r) {
+    //Delete the buffers
     glDeleteBuffers(1, &r->vbo);
     glDeleteVertexArrays(1, &r->vao);
 
-    glDeleteProgram(r->shader);
+    glDeleteProgram(r->shader); //Delete the shader
 
+    //Get rid of all of the textures in the renderer
     for (int i = 0; i < r->texture_count; i++) {
         glDeleteTextures(1, &r->textures[i]);
     }
+    free(r);
 }
 
-//Resetting the renderer for a new draw call
+/**
+ * Resetting the renderer for a new draw call
+ * @param r the renderer to reset
+ */
 void render_begin_frame(renderer *r) {
     r->vertex_count = 0;
     r->index_count = 0;
     r->texture_count = 0;
 }
 
-//Renderering the current stored data at the end of a draw call
+/**
+ * Renderering the current stored data at the end of a draw call
+ * @param r the renderer to render from
+ */
 void render_end_frame(renderer *r) {
     //Shifting the positions according to the projection matrix
     use(r->shader);
@@ -78,18 +95,27 @@ void render_end_frame(renderer *r) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, r->ebo);
     glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, r->index_count * sizeof(uint32_t), r->index_data); //Copies the quad data into the vbo
 
+    //Bind all of the textures
     for(int i = 0; i < r->texture_count; i++) {
         glActiveTexture(GL_TEXTURE0 + i);
         glBindTexture(GL_TEXTURE_2D, r->textures[i]);
     }
 
+    //Get the shader and the vertex array
     glUseProgram(r->shader);
     glBindVertexArray(r->vao);
 
-    glDrawElements(GL_TRIANGLES, r->index_count, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLES, r->index_count, GL_UNSIGNED_INT, 0); //Make the draw call
 }
 
-//Add a triangle polygon to the current render frame
+/**
+ * Add a triangle polygon to the current render frame
+ * @param r the renderer to use
+ * @param coords the coordinates of the triangle to render
+ * @param colours the colours of each of the triangle vertices
+ * @param uv the (u,v) coordinates of the triangle
+ * @param texture the texture to render from
+ */
 void render_push_triangle(renderer *r, vector2 coords[3], vector4 colours[3], vector2 uv[3], uint32_t texture) {
     uint32_t tex_index = INVALID_TEX_INDEX; //Setting default value to invalid so successful operations can make the index valid again
 
@@ -124,7 +150,14 @@ void render_push_triangle(renderer *r, vector2 coords[3], vector4 colours[3], ve
     }
 }
 
-//A a quad polygon to the current frame
+/**
+ * A a quad polygon to the current frame
+ * @param r the renderer to use
+ * @param coords the coordinates of the quad to render
+ * @param colours the colours of each of the quad vertices
+ * @param uv the (u,v) coordinates of the quad
+ * @param texture the texture to render from
+ */
 void render_push_quad(renderer *r, vector2 coords[4], vector4 colours[4], vector2 uv[4], uint32_t texture) {
     uint32_t tex_index = INVALID_TEX_INDEX; //Setting default value to invalid so successful operations can make the index valid again
 
@@ -169,7 +202,11 @@ void render_push_quad(renderer *r, vector2 coords[4], vector4 colours[4], vector
     r->index_data[r->index_count++] = base_index + 3;
 }
 
-//Load a texture
+/**
+ * Load a texture
+ * @param filepath the filepath to load the texture from
+ * @return the id of the OpenGL texture object created to represent the texture
+ */
 uint32_t render_texture_load(char *filepath) {
     uint32_t id;
     // load and create a texture
@@ -186,13 +223,11 @@ uint32_t render_texture_load(char *filepath) {
     // load image, create texture and generate mipmaps
     int width, height, nrChannels;
     unsigned char *data = stbi_load("../data/assets/container.jpg", &width, &height, &nrChannels, 0);
-    if (data)
-    {
+    if (data) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
-    else
-    {
+    else {
         printf("Failed to load texture\n");
         return 0;
     }
@@ -202,34 +237,42 @@ uint32_t render_texture_load(char *filepath) {
 
 /**
  * CODE FOR THE PIXEL RENDERER
+ * This is responsible to renderering the Noita-style world
  */
 
-void pixel_render_init(pixel_renderer *r, char *vertPath, char *fragPath) {
-    //Setting up the pbo for the pixel simulations:
-    glGenTextures(1, &r->pixel_tex);
+/**
+ * Initialises the pixel renderer
+ * @param r the pixel renderer to initialise
+ * @param vert_path the filepath to load the vertex shader from
+ * @param frag_path the filepath to load the fragment shader from
+ */
+void pixel_render_init(pixel_renderer *r, char *vert_path, char *frag_path) {
+    //Setting up the texture for the pixel simulations:
+    glGenTextures(1, &r->pixel_tex); //Only use one texture for the pixels that we just write to. Could switch to two and swap them out (like framebuffers)
     glBindTexture(GL_TEXTURE_2D, r->pixel_tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, PIXEL_SCREEN_WIDTH, PIXEL_SCREEN_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, PIXEL_SCREEN_WIDTH, PIXEL_SCREEN_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL); //Setting it to use rgba colours
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
+    //Setting up the pbo for the pixel simulations
     glGenBuffers(1, &r->pbo);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, r->pbo);
     glBufferData(GL_PIXEL_UNPACK_BUFFER, PIXEL_SCREEN_HEIGHT * PIXEL_SCREEN_WIDTH * 4, NULL, GL_STREAM_DRAW);
     r->pixels = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
     if(r->pixels) {
-        memset(r->pixels, 0x00, PIXEL_SCREEN_HEIGHT * PIXEL_SCREEN_WIDTH * 4);
+        memset(r->pixels, 0x00, PIXEL_SCREEN_HEIGHT * PIXEL_SCREEN_WIDTH * 4); //Setting all of the pixels to be colourless initially
         glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
     }
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
-    r->shader = load_shader(vertPath, fragPath);
+    r->shader = load_shader(vert_path, frag_path);
 
     float quadVertices[] = {
-        // positions                                // texCoords
-        0.0f, 0.0f,  0.0f, 0.0f,                            // top-left
-        0.0f, SCREEN_HEIGHT,  0.0f, 1.0f,             // bottom-left
-        SCREEN_WIDTH, SCREEN_HEIGHT,  1.0f, 1.0f, // bottom-right
-        SCREEN_WIDTH, 0.0f,  1.0f, 0.0f               // top-right
+        // positions         // texCoords
+        0.0f, 0.0f,          0.0f, 0.0f,                   // top-left
+        0.0f, SCREEN_HEIGHT, 0.0f, 1.0f,                   // bottom-left
+        SCREEN_WIDTH,        SCREEN_HEIGHT,  1.0f, 1.0f,   // bottom-right
+        SCREEN_WIDTH, 0.0f,  1.0f, 0.0f                    // top-right
     };
     unsigned int indices[] = {
         0, 1, 2,
@@ -259,6 +302,10 @@ void pixel_render_init(pixel_renderer *r, char *vertPath, char *fragPath) {
     glm_ortho(0.0f, SCREEN_WIDTH, SCREEN_HEIGHT, 0.0f, -1.0f, 1.0f, r->projection);
 }
 
+/**
+ * Frees a pixel renderer
+ * @param r the pixel renderer to free
+ */
 void pixel_render_free(pixel_renderer *r) {
     glDeleteBuffers(1, &r->vbo);
     glDeleteBuffers(1, &r->pbo);
@@ -268,25 +315,33 @@ void pixel_render_free(pixel_renderer *r) {
     glDeleteTextures(1, &r->pixel_tex);
 }
 
+/**
+ * Sets up the variables for renderering to the pbo from the pixel_renderer
+ * @param r the pixel render to begin the pixel frame for
+ */
 void render_begin_pixel_frame(pixel_renderer *r) {
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, r->pbo); //Binding the pbo
     glBufferData(GL_PIXEL_UNPACK_BUFFER, PIXEL_SCREEN_HEIGHT * PIXEL_SCREEN_WIDTH * 4, NULL, GL_STREAM_DRAW); //Forcing the gpu to discard any data it is currently using
     r->pixels = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
     if(r->pixels) {
-        memset(r->pixels, 0x00, PIXEL_SCREEN_HEIGHT * PIXEL_SCREEN_WIDTH * 4);
+        memset(r->pixels, 0x00, PIXEL_SCREEN_HEIGHT * PIXEL_SCREEN_WIDTH * 4); //Set the pixels to be blank to start with to avoid noise
     }
 }
 
+/**
+ * Ends rendering to the current pixel frame
+ * @param r the pixel_renderer whose frame should end
+ */
 void render_end_pixel_frame(pixel_renderer *r) {
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, r->pbo);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, r->pbo); //Get the pbo
     glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
 
-    glBindTexture(GL_TEXTURE_2D, r->pixel_tex);
+    glBindTexture(GL_TEXTURE_2D, r->pixel_tex); //Get the texture used for rendering the pixels
     glTexSubImage2D(GL_TEXTURE_2D, 0,0,0, PIXEL_SCREEN_WIDTH, PIXEL_SCREEN_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, 0);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
-    use(r->shader);
-    int proj_loc = glGetUniformLocation(r->shader, "uProjection");
+    use(r->shader); //Use the shader
+    int proj_loc = glGetUniformLocation(r->shader, "uProjection"); //Use the matrix projection
     glUniformMatrix4fv(proj_loc, 1, GL_FALSE, (float *)r->projection);
 
     // Bind texture to correct unit and uniform
@@ -297,12 +352,18 @@ void render_end_pixel_frame(pixel_renderer *r) {
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
 
+/**
+ * Draws a pixel to the pixel buffer
+ * @param r the pixel renderer to render to
+ * @param position where the pixel should be rendererd in the texture
+ * @param colour the colour of the pixel
+ */
 void draw_pixel(pixel_renderer *r, uint32_t position, uint8_t colour[4]) {
     if(!r->pixels) {
         printf("Pixel Buffer is NULL!!\n");
         return;
     }
-    if (position >= 0 && position < PIXEL_SCREEN_HEIGHT * PIXEL_SCREEN_WIDTH) {
+    if (position >= 0 && position < PIXEL_SCREEN_HEIGHT * PIXEL_SCREEN_WIDTH) { //Boundary check
         for(int i = 0; i < 4; i++) {
             r->pixels[(position*4)+i] = colour[i];
         }
@@ -311,10 +372,16 @@ void draw_pixel(pixel_renderer *r, uint32_t position, uint8_t colour[4]) {
 
 /*
  * CODE FOR THE DEBUG RENDERER
+ * NOTE: For now, there is just a hard limit on the number of objects that can be renderered by the debug renderer perframe. Will change this as necessary
  */
 
-//Allocate the renderer and assign its variables
-void debug_render_init(debug_renderer *r, char *vertPath, char *fragPath) {
+/**
+ * Allocate the renderer and assign its variables
+ * @param r the debug renderer to initialise
+ * @param vert_path the filepath to load the vertex shader from
+ * @param frag_path the filepath to load the fragment shader from
+ */
+void debug_render_init(debug_renderer *r, char *vert_path, char *frag_path) {
     //Getting the vao
     glGenVertexArrays(1, &r->vao);
     glBindVertexArray(r->vao);
@@ -336,7 +403,7 @@ void debug_render_init(debug_renderer *r, char *vertPath, char *fragPath) {
     glEnableVertexAttribArray(1);
 
     //Getting the shader for this renderer
-    r->shader = load_shader(vertPath, fragPath);
+    r->shader = load_shader(vert_path, frag_path);
 
     //Setting the projection matrix
     glm_ortho(0.0f, SCREEN_WIDTH, SCREEN_HEIGHT, 0.0f, -1.0f, 1.0f, r->projection);
@@ -348,7 +415,10 @@ void debug_render_init(debug_renderer *r, char *vertPath, char *fragPath) {
     glPointSize(10.0f);
 }
 
-//Destroy the renderer
+/*
+ * Free the renderer
+ * @param r the renderer to free
+ */
 void debug_render_free(debug_renderer *r) {
     glDeleteBuffers(1, &r->vbo);
     glDeleteVertexArrays(1, &r->vao);
@@ -356,7 +426,10 @@ void debug_render_free(debug_renderer *r) {
     glDeleteProgram(r->shader);
 }
 
-//Begin a single render frame (this is equivalent to a gpu render call)
+/*
+ * Begin a single render frame (this is equivalent to a gpu render call)
+ * @param r the debug_renderer whose render frame needs to start
+ */
 void debug_render_flush(debug_renderer *r) {
     use(r->shader);
 
@@ -384,24 +457,22 @@ void debug_render_flush(debug_renderer *r) {
     r->index_count = 0;
 }
 
-//NOTE: For now, there is just a hard limit on the number of objects that can be renderered by the debug renderer perframe. Will change this as necessary
-
-//Renders a quad on the screen
+/*
+ * Renders an unfilled quad on the screen. The quad can be irregular. Do not use triangles, since this adds a diagonal in the middle, just use four lines
+ * @param r the debug_renderer to use
+ * @param dimensions the coordinates of the corners of the quad
+ * @param colour the colour of the outline of the quad
+ */
 void render_draw_quad(debug_renderer *r, vector2 *dimensions, vector4 colour) {
-    if(r->vertex_count+ 4 >= MAX_DEBUG_VERTICES) {
+    if(r->vertex_count+ 4 >= MAX_DEBUG_VERTICES) { //Checking we aren't over the vertex limit
         printf("Max amount of quads reached for this frame");
         return;
     }
-    uint32_t base_index = r->vertex_count;
+    uint32_t base_index = r->vertex_count; //Holding the vertex count before adding the quad
 
     for(int i = 0; i < 4; i++) {
-        r->vertices[r->vertex_count++] = (debug_render_vertex){{dimensions[i].x, dimensions[i].y}, colour};
+        r->vertices[r->vertex_count++] = (debug_render_vertex){{dimensions[i].x, dimensions[i].y}, colour}; //Creating the debug vertices
     }
-
-    // r->vertices[r->vertex_count++] = (debug_render_vertex){{dimensions->x, dimensions->y}, colour}; // top-left
-    // r->vertices[r->vertex_count++] = (debug_render_vertex){{dimensions->x + dimensions->w, dimensions->y}, colour}; // top-right
-    // r->vertices[r->vertex_count++] = (debug_render_vertex){{dimensions->x + dimensions->w, dimensions->y + dimensions->h}, colour}; // bottom-right
-    // r->vertices[r->vertex_count++] = (debug_render_vertex){{dimensions->x, dimensions->y + dimensions->h}, colour}; // bottom-left
 
     //Need to also add ebo data so we can remove overlapping vertices
     //Unfortunately have to draw debug quads as 4 lines otherwise we get an ugly diagonal line in the middle because they're actually two quads
@@ -412,7 +483,13 @@ void render_draw_quad(debug_renderer *r, vector2 *dimensions, vector4 colour) {
     r->index_data[r->index_count++] = base_index + 3; r->index_data[r->index_count++] = base_index + 0; // left edge
 }
 
-//Draws a line between two points
+/*
+ * Draws a line between two points
+ * @param r the debug_renderer to use
+ * @param start the start of the line
+ * @param end the end of the line
+ * @param colour the colour of the line
+ */
 void render_draw_line(debug_renderer*r, vector2 start, vector2 end, vector4 colour) {
     if(r->vertex_count + 2 >= MAX_DEBUG_VERTICES) {
         printf("Max amount of lines reached for this frame");
@@ -427,7 +504,12 @@ void render_draw_line(debug_renderer*r, vector2 start, vector2 end, vector4 colo
     r->index_data[r->index_count++] = base+1;
 }
 
-//Draws a point
+/*
+ * Draws a point
+ * @param r the debug_renderer to use
+ * @param position where to drawn the point
+ * @param colour the colour of the point
+ */
 void render_draw_point(debug_renderer *r, vector2 position, vector4 colour) {
     if(r->point_count + 1 >= MAX_POINTS) {
         printf("Max amount of vertices reached for this frame");
@@ -436,7 +518,13 @@ void render_draw_point(debug_renderer *r, vector2 position, vector4 colour) {
     r->points[r->point_count++] = (debug_render_vertex){position, colour};
 }
 
-//Draws a circle
+/*
+ * Draws an unfilled circle. A circle is just lots of small lines (number of which is defined by CIRCLE_LINE_SEGMENTS) angled a small amount
+ * @param r the debug_renderer to use
+ * @param center the center of the circle
+ * @param radius the radius of the circle
+ * @param colour the colour of the circle
+ */
 void render_draw_circle(debug_renderer* r, vector2 center, float radius, vector4 colour) {
     if(r->vertex_count + CIRCLE_LINE_SEGEMENTS >= MAX_DEBUG_VERTICES) {
         printf("Max amount of circles reached for this frame");
@@ -449,7 +537,7 @@ void render_draw_circle(debug_renderer* r, vector2 center, float radius, vector4
     uint32_t base_index = r->vertex_count;
     for(int i = 0; i < CIRCLE_LINE_SEGEMENTS; i++) {
         float angle = i * angle_step;
-        float x = center.x + cosf(angle) * radius ;//* (1.0f /aspect);
+        float x = center.x + cosf(angle) * radius ;
         float y = center.y + sinf(angle) * radius;
         r->vertices[r->vertex_count++] = (debug_render_vertex){(vector2){x, y}, colour};
     }

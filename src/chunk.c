@@ -1,8 +1,13 @@
 #include "../include/chunk.h"
 #include <stdlib.h>
 #include <string.h>
+//INCOMPLETE
 
 //Need to add initialisations for start/end variable
+/**
+ * Initialisation function for a chunk_manager
+ * @return a pointer to the created chunk_manager class on the heap
+ */
 chunk_manager *create_chunk_manager(void) {
     //Creating overarching chunk manager
     chunk_manager *cm = malloc(sizeof(chunk_manager));
@@ -45,6 +50,4 @@ chunk *create_empty_chunk(chunk_manager *cm, ivector2 position) {
 chunk *load_chunk(chunk_manager *cm, ivector2 position);
 int write_chunk(chunk_manager *cm, ivector2 position);
 
-void create_tiles(chunk *c) {
-    
-}
+void create_tiles(chunk *c);
