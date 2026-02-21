@@ -584,7 +584,7 @@ b2BodyId create_polygon_collider(vector2* points, int points_size, vector2 cente
             b2Shape_SetFriction(testShapeId, 0.3);
         }
     }
-    // printf("Center after creation: (%f, %f)\n", retBodyDef.position.x * METRES_TO_PIXELS, retBodyDef.position.y * METRES_TO_PIXELS);
+    printf("Center after creation: (%f, %f)\n", retBodyDef.position.x * METRES_TO_PIXELS, retBodyDef.position.y * METRES_TO_PIXELS);
     //Cleanup
     free_list(triangle_list);
     free(b2_points);
