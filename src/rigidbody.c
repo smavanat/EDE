@@ -1,6 +1,7 @@
 #include "../include/rigidbody.h"
 #include "../include/queue.h"
 #include <limits.h>
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,7 +30,7 @@ ivector2 pixel_to_world_pos(uint32_t pos, uint32_t width) {
  * @param grid a pointer to the world grid where this rigidbody is located
  * @return a pointer to the created rigidbody
  */
-rigidbody *create_rigidbody(uint32_t id, uint16_t width, uint16_t height, uint8_t colour[4], ivector2 centre, world_grid *grid) {
+rigidbody *create_rigidbody(uint32_t id, uint16_t width, uint16_t height, uint8_t colour[4], vector2 centre, world_grid *grid) {
     //Creating the rigidbody and setting some variables
     rigidbody *rb = malloc(sizeof(rigidbody));
     rb->height = height;
@@ -37,19 +38,28 @@ rigidbody *create_rigidbody(uint32_t id, uint16_t width, uint16_t height, uint8_
     rb->pixel_count = width * height;
     memcpy(rb->colour, colour, sizeof(rb->colour));
     rb->pixel_coords = malloc(sizeof(ivector2) * rb->pixel_count);
+    rb->mask = calloc(width * height, sizeof(uint8_t)); //Initialising the pixel mask to be zeroed out
+
+    //Compute half-lengths
+    float half_width = (width-1)/2.0f;
+    float half_height = (height-1)/2.0f;
+
+    //Compute top-left corner origin
+    int top_left_x = (int)floorf(centre.x - half_width);
+    int top_left_y = (int)floorf(centre.y - half_height);
 
     //Iterating over the area of the rigidbody
     for(int y = 0; y < height; y++) {
         for(int x = 0; x < width; x++) {
-            memcpy(grid->pixels[((centre.y + y - (height/2))*grid->width) + centre.x + x - (width/2)].colour, colour, sizeof(grid->pixels[((centre.y + y)*grid->width) + centre.x + x].colour)); //Setting the grid pixels at these positions to be the colour assigned to the rigidbody
-            grid->pixels[((centre.y + y - (height/2))*grid->width) + centre.x + x - (width/2)].parent_body = id; //Setting the pixel parent id to be this rigidbody's entity parent id
-            rb->pixel_coords[(y*width) + x ] = (ivector2){x - (width/2), y - (height/2)}; //Setting the relative pixel coords inside the rigidbody
+            memcpy(grid->pixels[((top_left_y + y)*grid->width) + top_left_x + x].colour, colour, sizeof(grid->pixels[((top_left_y + y)*grid->width) + top_left_x + x].colour)); //Setting the grid pixels at these positions to be the colour assigned to the rigidbody
+            grid->pixels[((top_left_y + y)*grid->width) + top_left_x + x].parent_body = id; //Setting the pixel parent id to be this rigidbody's entity parent id
+            rb->pixel_coords[(y*width) + x ] = (vector2){x - half_width, y - half_height}; //Setting the relative pixel coords inside the rigidbody
+            rb->mask[(y*width) + x] = 1;
         }
     }
 
     return rb;
 }
-
 /**
  * Creates a rigidbody from a set of pixel data rather than just width and height, mostly used for split or non-rectangular rigidbodies
  * @param id the id of its parent entity
@@ -61,20 +71,33 @@ rigidbody *create_rigidbody(uint32_t id, uint16_t width, uint16_t height, uint8_
  * @param grid a pointer to the world grid where this rigidbody is located
  * @return a pointer to the created rigidbody
  */
-rigidbody *create_rigidbody_from_pixels(uint32_t id, uint16_t width, uint16_t height, uint8_t colour[4], ivector2 centre, list *pixel_coords, world_grid *grid) {
+rigidbody *create_rigidbody_from_pixels(uint32_t id, uint16_t width, uint16_t height, uint8_t colour[4], vector2 centre, list *pixel_coords, world_grid *grid) {
     //Creating the rigidbody and setting some variables
     rigidbody *rb = malloc(sizeof(rigidbody));
     rb->height = height;
     rb->width = width;
     rb->pixel_count = pixel_coords->size;
     memcpy(rb->colour, colour, sizeof(rb->colour));
-    rb->pixel_coords = malloc(sizeof(ivector2) * rb->pixel_count);
+    rb->pixel_coords = malloc(sizeof(vector2) * rb->pixel_count);
+    rb->mask = calloc(height * width, sizeof(uint8_t)); //Initialising the pixel mask to be zeroed out
+
+    //Compute the center offset to make sure its in the center of the pixel and not on the side
+    float off_x = centre.x - 0.5f;
+    float off_y = centre.y - 0.5f;
+
+    //Compute the half-lengths
+    float half_width = (width-1)/2.0f;
+    float half_height = (height-1)/2.0f;
 
     //Iterating over the pixels that make up the rigidbody
     for(int i = 0; i < rb->pixel_count; i++) {
         ivector2 coord = get_value(pixel_coords, ivector2, i);
-        rb->pixel_coords[i] = (ivector2){coord.x - centre.x, coord.y - centre.y}; //Setting the internal relative pixel coord of a specific pixel
+        float local_x = coord.x - off_x;
+        float local_y = coord.y - off_y;
+        rb->pixel_coords[i] = (vector2){local_x, local_y};
+
         grid->pixels[(coord.y * grid->width) + coord.x].parent_body = id; //Setting this pixel to have this rigidbody as its grid parent
+        rb->mask[(int)floorf(local_y + half_height + 0.5) * width + (int)floorf(local_x +  half_width + 0.5)] = 1; //Setting the mask to be filled
     }
 
     return rb;
@@ -88,13 +111,12 @@ rigidbody *create_rigidbody_from_pixels(uint32_t id, uint16_t width, uint16_t he
  * @param grid the world grid that erasure is occuring on
  * @param rbs a pointer to a list to store the coordintes of erased pixels that are part of a rigidbody
  */
-void erasePixels(int radius, int x, int y, world_grid *grid, list *rb_pts) {
+void erase_pixels(int radius, int x, int y, world_grid *grid, list *rb_pts) {
     if (radius > 0) { //If the square is not one pixel in side length
         for (int h = 0; h < radius * 2; h++) {
             for (int w = 0; w < radius * 2; w++) {
                 int dx = radius - w; // horizontal offset
                 int dy = radius - h; // vertical offset
-                // if ((dx * dx + dy * dy) < (radius * radius) && (x + dx < grid->width) && (x + dx > -1) && (y + dy < grid->height) && (y + dy > -1))
                 if((x + dx < grid->width) && (x + dx > -1) && (y + dy < grid->height) && (y + dy > -1)) { //If the offset is in the grid boundary
                     //Set the pixel at this grid position to be colourless as its erased
                     memcpy(grid->pixels[(y + dy) * grid->width + (x + dx)].colour, NO_PIXEL_COLOUR, sizeof(grid->pixels[(y + dy) * grid->width + (x + dx)].colour));
@@ -502,8 +524,8 @@ void construct_new_rigidbody(list *pixel_coords, world_grid *grid, uint8_t colou
     //Calculating dimensions and centre
     int width = maxX - minX + 1;
     int height = maxY - minY + 1;
-    int centreX = minX + (width/2);
-    int centreY = minY + (height/2);
+    float centreX = minX + ((width-1) * 0.5f) + 0.5f;
+    float centreY = minY + ((height-1) * 0.5f) + 0.5f;
     //printf("Width: %i, Height: %i\n", width, height);
     //printf("Center: (%i, %i)\n", centreX, centreY);
 
@@ -514,7 +536,7 @@ void construct_new_rigidbody(list *pixel_coords, world_grid *grid, uint8_t colou
     add_component_to_entity(p, e, TRANSFORM, t);
 
     //Creating the new rigidbody -> Need to copy over the pixel coords and calculate their relative position to the new centre
-    rigidbody *rb = create_rigidbody_from_pixels(e, width, height, colour, (ivector2){centreX, centreY}, pixel_coords, grid);
+    rigidbody *rb = create_rigidbody_from_pixels(e, width, height, colour, (vector2){centreX, centreY}, pixel_coords, grid);
     add_component_to_entity(p, e, RIGIDBODY, rb);
 
     //Marching squares on the outline of the pixels
@@ -568,16 +590,24 @@ void split_rigidbody(entity id, plaza *p, world_grid *grid, b2WorldId world_id) 
     list *new_rigidbody_regions= list_alloc(5, sizeof(list *));
 
     //Creating a temporary duplicate of the pixel data in grid to use for flood-fill (so we don't overwrite existing data)
-    ivector2 *grid_coords = malloc(sizeof(ivector2) * rb->pixel_count);
     pixel *grid_pixels = malloc(sizeof(pixel) * grid->width * grid->height);
     memcpy(grid_pixels, grid->pixels, sizeof(pixel) * grid->width * grid->height);
+
+    ivector2 *grid_coords = malloc(sizeof(ivector2) * rb->pixel_count);
     for(int i = 0; i < rb->pixel_count; i++) {
-        grid_coords[i] = (ivector2){(int)t->position.x + rb->pixel_coords[i].x, (int)t->position.y + rb->pixel_coords[i].y};
+        // Rotate pixel_coords by rigidbody rotation
+        vector2 rotated = rotate_about_point(&rb->pixel_coords[i], &(vector2){0,0}, t->rotation, 1);
+        // Convert to integer world coordinates
+        grid_coords[i] = (ivector2){(int)roundf(rotated.x + t->position.x), (int)roundf(rotated.y + t->position.y)};
     }
 
     //Finding all of the seperate regions that are now contained in the old rigidbody after erasure
     for(int i = 0; i < rb->pixel_count; i++) {
         if(grid_pixels[(grid_coords[i].y * grid->width) + grid_coords[i].x].parent_body == id) {
+            //TODO: Do flood-fill on the pixel mask to get all of the unrotated pixels in a region
+            //      This is because if we do it on the grid, all the pixels given will already be rotated. The new rigidbody should have all of the unremoved pixels from the mask,
+            //      not from the grid, which could have some missing ones due to rotation
+            //      Same thing with collider generation. Switch it all to be mask based and not grid based
             list *region = flood_fill(grid_coords[i], grid_pixels, rb->pixel_count, grid->width, grid->height, id); //Getting all of the pixels in a region
             //printf("Rigidbody region size: %lu\n", region->size);
             if(region->size > 0){ //Adding non-empty regions to the list to be processed

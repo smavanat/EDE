@@ -22,7 +22,7 @@ ivector2 pixel_to_world_pos(uint32_t pos, uint32_t width);
  * @param grid a pointer to the world grid where this rigidbody is located
  * @return a pointer to the created rigidbody
  */
-rigidbody *create_rigidbody(uint32_t id, uint16_t width, uint16_t height, uint8_t colour[4], ivector2 startpos, world_grid *grid);
+rigidbody *create_rigidbody(uint32_t id, uint16_t width, uint16_t height, uint8_t colour[4], vector2 centre, world_grid *grid);
 /**
  * Creates a rigidbody from a set of pixel data rather than just width and height, mostly used for split or non-rectangular rigidbodies
  * @param id the id of its parent entity
@@ -34,7 +34,7 @@ rigidbody *create_rigidbody(uint32_t id, uint16_t width, uint16_t height, uint8_
  * @param grid a pointer to the world grid where this rigidbody is located
  * @return a pointer to the created rigidbody
  */
-rigidbody *create_rigidbody_from_pixels(uint32_t id, uint16_t width, uint16_t height, uint8_t colour[4], ivector2 centre, list *pixel_coords, world_grid *grid);
+rigidbody *create_rigidbody_from_pixels(uint32_t id, uint16_t width, uint16_t height, uint8_t colour[4], vector2 centre, list *pixel_coords, world_grid *grid);
 /**
  * Erases pixels in a square area. Used for testing the pixel destruction system
  * @param radius the half-width of the square erasure area
@@ -43,7 +43,7 @@ rigidbody *create_rigidbody_from_pixels(uint32_t id, uint16_t width, uint16_t he
  * @param grid the world grid that erasure is occuring on
  * @param rbs a pointer to a list to store the coordintes of erased pixels that are part of a rigidbody
  */
-void erasePixels(int radius, int x, int y, world_grid *grid, list *rbs);
+void erase_pixels(int radius, int x, int y, world_grid *grid, list *rbs);
 /**
  * Splits a 'dirty' (has erased pixels) rigidbody into new rigidbodies if necessary, or adjusts its collider if not
  * @param id the entity to which the rigidbody belongs

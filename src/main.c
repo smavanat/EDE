@@ -29,9 +29,7 @@ world_grid *grid = NULL;
 //TODO: Need to make the list in the world that holds all the systems a priority queue so we can order the systems properly
 //      If a rigidbody drops to one pixel, just delete that rigidbody and treat the pixel as part of the pixel simulation
 //      Should just make two world grid buffers that we swap instead of constantly mallocing new ones
-//      Fix collider generation bugs -> 1) Colliders move after regeneration. This only happens with the new rotation code. Erase box to see example
-//      Fix bug where rotated pixels don't line up very well with the rotated collider
-//      Fix bug where screen seems to jerk for a frame when red box collides with bottom panel
+//      Fix bug where erasing a dynamic box2d body also erases from the opposite side
 //NOTE: ALL RIGIDBODIES NEED TO HAVE EVEN DIMENSIONS TO ENSURE WE DON'T GET WEIRD HALF-PIXEL OFFSETS
 
 //Thank you Bernardo: https://stackoverflow.com/questions/1157209/is-there-an-alternative-sleep-function-in-c-to-milliseconds
@@ -198,12 +196,12 @@ int load(void) {
     transform *t = create_transform((vector2){10, 10}, 0, 0);
     add_component_to_entity(w->p, r, TRANSFORM, t);
 
-    rigidbody *rb = create_rigidbody(r, 10, 6, (uint8_t[]){0xff, 0x00, 0x00, 0xff}, vec_to_ivec(t->position), grid);
+    rigidbody *rb = create_rigidbody(r, 10, 6, (uint8_t[]){0xff, 0x00, 0x00, 0xff}, (t->position), grid);
     add_component_to_entity(w->p, r, RIGIDBODY, rb);
 
     collider *c = malloc(sizeof(collider));
     c->type = BOX;
-    c->collider_id = create_box_collider(t->position, rb->width, rb->height, t->rotation, w->world_id, b2_dynamicBody);
+    c->collider_id = create_box_collider(t->position, rb->width, rb->height, t->rotation + (M_PI), w->world_id, b2_dynamicBody);
     add_component_to_entity(w->p, r, COLLIDER, c);
 
     //Entity to hold the bottom platform
@@ -211,7 +209,7 @@ int load(void) {
     transform *tb = create_transform((vector2){40, 57}, 0, 0);
     add_component_to_entity(w->p, base, TRANSFORM, tb);
 
-    rigidbody *rbb = create_rigidbody(base, 80, 6, (uint8_t[]){0x00, 0x00, 0x00, 0xff}, vec_to_ivec(tb->position), grid);
+    rigidbody *rbb = create_rigidbody(base, 80, 6, (uint8_t[]){0x00, 0x00, 0x00, 0xff}, (tb->position), grid);
     add_component_to_entity(w->p, base, RIGIDBODY, rbb);
 
     collider *cb = malloc(sizeof(collider));

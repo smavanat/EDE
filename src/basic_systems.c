@@ -54,34 +54,73 @@ void rigidbody_system_update(plaza *p, ecs_system *s, float dt) {
     for(size_t i = 0; i < s->archetypes->size; i++) { //Getting all of the archetypes for this system
         for(size_t j = 0; j < get_value(s->archetypes, archetype *, i)->size; j++) { //Getting all of the entities in an archetype
             //Getting the rigidbody and transform components of an entity
-            rigidbody *rigidbody = get_component_from_entity(p, ((archetype **)s->archetypes->data)[i]->entities[j], RIGIDBODY);
-            transform *t = get_component_from_entity(p, ((archetype **)s->archetypes->data)[i]->entities[j], TRANSFORM);
+            rigidbody *rigidbody = get_component_from_entity(p, get_value(s->archetypes, archetype *, i)->entities[j], RIGIDBODY);
+            transform *t = get_component_from_entity(p, get_value(s->archetypes, archetype *, i)->entities[j], TRANSFORM);
 
-            //Iterate over every pixel associated with a ridbody
-            for(int p = 0; p < rigidbody->pixel_count; p++) {
-                vector2 old_pos = ivec_to_vec(rigidbody->pixel_coords[p]); //Get its position in the previous frame
-                vector2 rotated_pos = rotate_about_point(&old_pos, &(vector2){0,0}, t->rotation, 1); //Update its position based on the transform rotation
-                ivector2 new_pos = (ivector2){floor(rotated_pos.x + t->position.x + 0.5), floor(rotated_pos.y + t->position.y + 0.5)}; //Update its position based on the transform position
-                if(new_pos.x < new_grid->width && new_pos.x >= 0 && new_pos.y < new_grid->height && new_pos.y >= 0) { //If the new position is in the visible region of the grid
-                    //Copy over the pixel data to the new position
-                    memcpy(new_grid->pixels[(new_pos.y * new_grid->width) + new_pos.x].colour, rigidbody->colour, sizeof(new_grid->pixels[(new_pos.y * new_grid->width) + new_pos.x].colour));
-                    new_grid->pixels[(new_pos.y * new_grid->width) + new_pos.x].parent_body = ((archetype **)s->archetypes->data)[i]->entities[j];
+            //Pre-compute sin and cos
+            float c = cosf(t->rotation);
+            float sn = sinf(t->rotation);
+
+            //Pre-compute half-width and half-height of rigidbody
+            float half_width = (rigidbody->width - 1) * 0.5f;
+            float half_height = (rigidbody->height - 1) * 0.5f;
+
+            //r^2 = x^2 + y^2
+            float radius = ceilf(sqrtf(half_width*half_width + half_height*half_height));
+
+            //Compute the dimensions of the bounding circle of the rigidbody's bounding box
+            int min_x = (int)floorf(t->position.x - radius);
+            int max_x = (int)ceilf (t->position.x + radius);
+            int min_y = (int)floorf(t->position.y - radius);
+            int max_y = (int)ceilf (t->position.y + radius);
+
+            //Iterate over all of the pixels in the bounding circle around the rigidbody
+            //Using reverse mapping -> reverse rotate all of the pixels in the bounding circle to see which ones would have been in
+            //the unrotated rigidbody and what their position would have been, and only fill those ones in
+            for(int world_y = min_y; world_y <= max_y; world_y++) {
+                for(int world_x = min_x; world_x <= max_x; world_x++) {
+                    if(world_x < 0 || world_x >= new_grid->width || world_y < 0 || world_y >= new_grid->height) continue;
+
+                    // Compute world pixel center relative to object center
+                    float dx = (world_x + 0.5) - t->position.x;
+                    float dy = (world_y + 0.5) - t->position.y;
+
+                    // Inverse rotate to find where the pixel would be if the rigidbody had 0 rotation
+                    float local_x =  dx * c + dy * sn;
+                    float local_y = -dx * sn + dy * c;
+
+                    // Convert to rigidbody grid coordinates
+                    float grid_x = local_x + half_width;
+                    float grid_y = local_y + half_height;
+
+                    //Rounding the grid coordinates to make sure its at the center and not the edge of the pixel
+                    int ix = (int)floorf(grid_x + 0.5f);
+                    int iy = (int)floorf(grid_y + 0.5f);
+
+                    //If the unrotated pixel is in the rigidbody's bounding box and the mask says its not erased, colour it
+                    if(ix >= 0 && ix < rigidbody->width && iy >= 0 && iy < rigidbody->height && rigidbody->mask[iy * rigidbody->width + ix]) {
+                        memcpy(new_grid->pixels[world_y * new_grid->width + world_x].colour, rigidbody->colour, sizeof(new_grid->pixels[world_y * new_grid->width + world_x].colour));
+
+                        new_grid->pixels[world_y * new_grid->width + world_x].parent_body = get_value(s->archetypes, archetype *, i)->entities[j];
+                    }
                 }
             }
         }
     }
-    //Do pixel erasure after updating all of the grid pixel data
 
-    //Only erase when the window is in focus. Need to do this otherwise erasure would happen even when the window wasn't open
-    if (glfwGetWindowAttrib(gw, GLFW_FOCUSED)) {
+    //Do pixel erasure after updating all of the grid pixel data
+    if (glfwGetWindowAttrib(gw, GLFW_FOCUSED)) { //Only erase when the window is in focus.
         glfwGetCursorPos(gw, &cursor_x, &cursor_y); //Get the mouse position
 
-        list *rb_list = list_alloc(10, sizeof(ivector2)); //List to store coordinates of points which have been erased
+        list *point_list = list_alloc(10, sizeof(ivector2)); //List to store coordinates of points which have been erased
         list *entity_list = list_alloc(10, sizeof(int32_t)); //List to store all of the parent entities of these rigidbodies (to prevent double rigidbody processing)
-        erasePixels(2, cursor_x * 0.1, cursor_y * 0.1, new_grid, rb_list); //Erase pixels at the current cursor position
+        erase_pixels(2, cursor_x * 1/(float)PIXEL_SIZE, cursor_y * 1/(float)PIXEL_SIZE, new_grid, point_list); //Erase pixels at the current cursor position
 
-        for(int i = 0; i < rb_list->size; i++) { //For each rigidbody whose pixels have been erased
-            uint32_t grid_pos = (get_value(rb_list, ivector2, i).y * new_grid->width) + get_value(rb_list, ivector2, i).x; //Get its grid index
+        if(point_list->size > 0)
+            printf("========= NEW ERASURE ========\n");
+        for(int i = 0; i < point_list->size; i++) { //For each erased point which has a rigidbody parent
+            ivector2 point = get_value(point_list, ivector2, i);
+            uint32_t grid_pos = (point.y * new_grid->width) + point.x; //Get its grid index
 
             //Checking if we have already processed a particular rigidbody by checking if we have stored the id of its parent entity
             int index = -1;
@@ -100,27 +139,47 @@ void rigidbody_system_update(plaza *p, ecs_system *s, float dt) {
             transform *t = get_component_from_entity(p, new_grid->pixels[grid_pos].parent_body, TRANSFORM); //And to its corresponding transform
 
             //Get the relative position of the pixel to the rigidbody that is stored in the rigidbody struct
-            vector2 d = {(get_value(rb_list, ivector2, i).x - t->position.x), (get_value(rb_list, ivector2, i).y - t->position.y)};
+            vector2 d = {(point.x + 0.5) - t->position.x, (point.y + 0.5f) - t->position.y};
             vector2 rotated_pos = rotate_about_point(&d, &(vector2){0,0}, -t->rotation, 1);
-            ivector2 rel_pos = (ivector2){(int)floorf(rotated_pos.x + 0.5f), (int)floorf(rotated_pos.y + 0.5f)};
 
-            //Check if that relative position is stored in the rigidbody struct
-            for(int j = 0; j < rb->pixel_count; j++) {
-                int dx = rb->pixel_coords[j].x - rel_pos.x;
-                int dy = rb->pixel_coords[j].y - rel_pos.y;
+            //Computign half-lengths of this rigidbody
+            float half_width = (rb->width - 1) * 0.5f;
+            float half_height = (rb->height - 1) * 0.5f;
 
-                //If it is, remove it
-                if(abs(dx) <= 1 && abs(dy) <= 1) {
-                    rb->pixel_coords[j] = rb->pixel_coords[rb->pixel_count-1];
-                    rb->pixel_count--;
-                    break;
+            //Get the pixel's position in the rigidbody
+            int ix = (int)floorf(rotated_pos.x + half_width + 0.5f);
+            int iy = (int)floorf(rotated_pos.y + half_height + 0.5f);
+
+            //If the unrotated pixel is in the rigidbody's bounding box and the mask says its not erased, colour it
+            if(ix >= 0 && ix < rb->width && iy >= 0 && iy < rb->height && rb->mask[iy * rb->width + ix]) {
+                //Clear mask. Must be done before removing pixel
+                rb->mask[iy * rb->width + ix] = 0;
+
+                for(int j = 0; j < rb->pixel_count; j++) {
+                    //Pixel coords relative to rigidbody center
+                    vector2 rel = rb->pixel_coords[j];
+
+                    //Rotate to world space
+                    vector2 world_pos = rotate_about_point(&rel, &(vector2){0,0}, t->rotation, 1);
+                    world_pos.x += t->position.x;
+                    world_pos.y += t->position.y;
+
+                    //Compare to the erased pixel using a small epsilon
+                    float dx = world_pos.x - ((float)point.x + 0.5f);
+                    float dy = world_pos.y - ((float)point.y + 0.5f);
+
+                    if(dx*dx + dy*dy < 0.25f) { //within half a pixel
+                        rb->pixel_coords[j] = rb->pixel_coords[rb->pixel_count - 1]; //remove pixel by swapping with last index
+                        rb->pixel_count--; //Reduce pixel count
+                        break;
+                    }
                 }
             }
             new_grid->pixels[grid_pos].parent_body = -1; //Need to actually set the pixel to have no parent otherwise bfs will be wierd
         }
         //Split all processed rigidbodies
         for(int i = 0; i < entity_list->size; i++) {
-            printf("================ NEW FRAME ==============\n");
+            printf("================ NEW SPLIT ==============\n");
             split_rigidbody(get_value(entity_list, int32_t, i), p, new_grid, world_id);
         }
     }
@@ -142,11 +201,14 @@ void physics_system_update(plaza *p, ecs_system *s, float dt) {
         for(size_t j = 0; j < get_value(s->archetypes, archetype *, i)->size; j++) { //For every entity in that archetype
             transform *t = get_component_from_entity(p, ((archetype **)s->archetypes->data)[i]->entities[j], TRANSFORM); //Get the transform
             collider *c = get_component_from_entity(p, ((archetype **)s->archetypes->data)[i]->entities[j], COLLIDER); //Get the collider
+            // if(b2Body_GetType(c->collider_id) == b2_dynamicBody) {
+            //
+            // }
             draw_collider(c, dRenderer, (vector4){0.0f, 0.0f, 1.0f, 1.0f}); //Draw the collider for debug purposes
 
             //Set the transform position and rotation to be the collider position and rotation
             vector2 temp = b2Body_GetPosition(c->collider_id);
-            t->rotation = normalise_angle(b2Rot_GetAngle(b2Body_GetRotation(c->collider_id)))/DEGREES_TO_RADIANS;
+            t->rotation = normalise_angle(b2Rot_GetAngle(b2Body_GetRotation(c->collider_id)));
             t->position = (vector2){temp.x*METRES_TO_PIXELS, temp.y * METRES_TO_PIXELS};
         }
     }

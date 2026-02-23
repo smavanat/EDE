@@ -166,11 +166,10 @@ typedef struct {
 typedef struct {
     uint16_t width;
     uint16_t height;
-    uint8_t colour[4];
-    // pixel **pixels;
-    // ivector2 *pixel_coords;
-    ivector2 *pixel_coords; //Coordinates of the pixels that make up to the rigidbody relative to its center
     uint32_t pixel_count;
+    uint8_t colour[4];
+    vector2 *pixel_coords; //Coordinates of the pixels that make up to the rigidbody relative to its center
+    uint8_t *mask; //Holds whether a pixel is filled or not
 } rigidbody;
 
 /**
