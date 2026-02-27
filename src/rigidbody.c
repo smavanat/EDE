@@ -228,10 +228,14 @@ int get_current_square(ivector2 start_coord, rigidbody *rb) {
     int x = start_coord.x;
     int y = start_coord.y;
 
-    result |= sample_mask(rb, x,     y)     << 0; // top-left
-    result |= sample_mask(rb, x + 1, y)     << 1; // top-right
-    result |= sample_mask(rb, x,     y + 1) << 2; // bottom-left
-    result |= sample_mask(rb, x + 1, y + 1) << 3; // bottom-right
+    // result |= sample_mask(rb, x,     y)     << 0; // top-left
+    // result |= sample_mask(rb, x + 1, y)     << 1; // top-right
+    // result |= sample_mask(rb, x,     y + 1) << 2; // bottom-left
+    // result |= sample_mask(rb, x + 1, y + 1) << 3; // bottom-right
+    if(x >= 0 && x < rb->width && y >= 0 && y < rb->height && rb->mask[y * rb->width + x] != 0) result += 1;
+    if(x+1 >= 0 && x+1 < rb->width && y >= 0 && y < rb->height && rb->mask[y * rb->width + x+1] != 0) result += 2;
+    if(x >= 0 && x < rb->width && y+1 >= 0 && y+1 < rb->height && rb->mask[(y+1) * rb->width + x] != 0) result += 4;
+    if(x+1 >= 0 && x+1 < rb->width && y+1 >= 0 && y+1 < rb->height && rb->mask[(y+1) * rb->width + x+1] != 0) result += 8;
 
     return result;
 }
@@ -254,13 +258,13 @@ ivector2 get_start_point_old(list* pixel_coords) {
 }
 
 ivector2 get_start_point(list* pixel_coords, rigidbody *rb) {
-    ivector2 best_pixel = {0, 0};
+    ivector2 best = {0, 0};
     bool found = false;
 
-    // 1. Find top-most, left-most boundary pixel
     for (int i = 0; i < pixel_coords->size; i++) {
         ivector2 p = get_value(pixel_coords, ivector2, i);
 
+        // Skip non-boundary pixels
         if (!sample_mask(rb, p.x, p.y)) continue;
 
         bool is_boundary =
@@ -272,60 +276,15 @@ ivector2 get_start_point(list* pixel_coords, rigidbody *rb) {
         if (!is_boundary) continue;
 
         if (!found ||
-            p.y < best_pixel.y ||
-            (p.y == best_pixel.y && p.x < best_pixel.x)) {
-            best_pixel = p;
+            p.y < best.y ||
+            (p.y == best.y && p.x < best.x)) {
+            best = p;
             found = true;
         }
     }
 
-    // 2. Check the 4 surrounding squares of that pixel
-    ivector2 candidate_squares[4] = {
-        { best_pixel.x - 1, best_pixel.y - 1 },
-        { best_pixel.x,     best_pixel.y - 1 },
-        { best_pixel.x - 1, best_pixel.y     },
-        { best_pixel.x,     best_pixel.y     }
-    };
-
-    for (int i = 0; i < 4; i++) {
-        int square = get_current_square(candidate_squares[i], rb);
-
-        if (square != 0 && square != 15) {
-            return candidate_squares[i];
-        }
-    }
-
-    // Fallback (should not normally happen)
-    return candidate_squares[3];
+    return best;
 }
-// ivector2 get_start_point(list* pixel_coords, rigidbody *rb) {
-//     ivector2 best = {0, 0};
-//     bool found = false;
-//
-//     for (int i = 0; i < pixel_coords->size; i++) {
-//         ivector2 p = get_value(pixel_coords, ivector2, i);
-//
-//         // Skip non-boundary pixels
-//         if (!sample_mask(rb, p.x, p.y)) continue;
-//
-//         bool is_boundary =
-//             !sample_mask(rb, p.x - 1, p.y) ||
-//             !sample_mask(rb, p.x + 1, p.y) ||
-//             !sample_mask(rb, p.x, p.y - 1) ||
-//             !sample_mask(rb, p.x, p.y + 1);
-//
-//         if (!is_boundary) continue;
-//
-//         if (!found ||
-//             p.y < best.y ||
-//             (p.y == best.y && p.x < best.x)) {
-//             best = p;
-//             found = true;
-//         }
-//     }
-//
-//     return best;
-// }
 
 /**
  * Implementation of marching squares. Performs marching squares in a conter-clockwise fashion to find the outline of a given rigidbody
@@ -407,14 +366,12 @@ list *marching_squares_old(list *pixel_coords, world_grid *grid, int32_t id) {
 }
 
 list *marching_squares(list *pixel_coords, rigidbody *rb) {
-    ivector2 start_point = get_start_point(pixel_coords, rb); //Getting the start position of marching squares
-    printf("Start Point: (%i %i)\n", start_point.x, start_point.y);
+    ivector2 start_point = get_start_point_old(pixel_coords); //Getting the start position of marching squares
     //Adjust the starting point so it moves along the edge of the image
-    // start_point.x -= 1;
-    // start_point.y -= 1;
-    // printf("Marching Sqaures start point: (%i, %i)\n", start_point.x, start_point.y);
+    start_point.x -= 1;
+    start_point.y -= 1;
+    printf("MS start point: (%i, %i)\n", start_point.x, start_point.y);
     list *contour_points = list_alloc(pixel_coords->size, sizeof(ivector2)); //Return value
-    // printf("Start after modification (%i, %i)\n", start_point.x, start_point.y);
 
     //Which direction we are moving in the current and previous iterations of marching squares
     int stepX = 0, stepY = 0;
@@ -636,62 +593,6 @@ void irdp(int start_index, int end_index, float epsilon, list *all_points, list 
  * @param id the id of the parent entity of the rigidbody
  * @return a list of ivector2 representing the coordinates of a region of pixels whose parent_body matches id
  */
-list *flood_fill_old(ivector2 start, pixel *grid_coords, int size, int width, int height, int id) {
-    //Initialising variables
-    list *indecies = list_alloc(size, sizeof(ivector2)); //Returning indecies
-    queue *q = queue_alloc(size, sizeof(ivector2)); //Queue of values to be visited in bfs
-    bool ok;
-
-    //Pushing the start position to the returning list and the bfs queue
-    push_value(indecies, ivector2, start);
-    enqueue(q, ivector2, start);
-    grid_coords[((start.y) * width) + start.x].parent_body = -1; //Setting the parent_body to be -1 to ensure this coordinate is not visited again
-
-    //BFS implementation
-    while (q->size > 0) {
-        //Get the next element to visit
-        ivector2 current_pixel;
-        dequeue(q, ivector2, current_pixel, ok);
-        if(!ok) break;
-        // printf("Current pixel coords: (%i, %i) ", current_pixel.x, current_pixel.y);
-        // printf("Index: %i ", ((current_pixel.y) * width) + current_pixel.x);
-        // printf("Parent Body: %i\n", grid_coords[((current_pixel.y - 1) * width) + current_pixel.x].parent_body);
-
-        //Visit the top, down, left and right neighbours
-        if(current_pixel.y > 0 && grid_coords[((current_pixel.y - 1) * width) + current_pixel.x].parent_body == id) { //Check that the top neighbour is still in the grid and has the correct parent_body
-            //Add the neighbour to the return list and the bfs queue
-            ivector2 new_pos = (ivector2){current_pixel.x, current_pixel.y-1};
-            push_value(indecies, ivector2, new_pos);
-            enqueue(q, ivector2, new_pos);
-            grid_coords[((current_pixel.y - 1) * width) + current_pixel.x].parent_body = -1; //Set its parent_body to -1 so never visited again
-        }
-        if(current_pixel.x > 0 && grid_coords[((current_pixel.y) * width) + current_pixel.x - 1].parent_body == id) { //Check that the right neighbour is still in the grid and has the correct parent_body
-            //Add the neighbour to the return list and the bfs queue
-            ivector2 new_pos = (ivector2){current_pixel.x-1, current_pixel.y};
-            push_value(indecies, ivector2, new_pos);
-            enqueue(q, ivector2, new_pos);
-            grid_coords[((current_pixel.y) * width) + current_pixel.x-1].parent_body = -1; //Set its parent_body to -1 so never visited again
-        }
-        if(current_pixel.y < height - 1 && grid_coords[((current_pixel.y + 1) * width) + current_pixel.x].parent_body == id) { //Check that the bottom neighbour is still in the grid and has the correct parent_body
-            //Add the neighbour to the return list and the bfs queue
-            ivector2 new_pos = (ivector2){current_pixel.x, current_pixel.y+1};
-            push_value(indecies, ivector2, new_pos);
-            enqueue(q, ivector2, new_pos);
-            grid_coords[((current_pixel.y + 1) * width) + current_pixel.x].parent_body = -1; //Set its parent_body to -1 so never visited again
-        }
-        if(current_pixel.x < width - 1 && grid_coords[((current_pixel.y) * width) + current_pixel.x+1].parent_body == id) { //Check that the left neighbour is still in the grid and has the correct parent_body
-            //Add the neighbour to the return list and the bfs queue
-            ivector2 new_pos = (ivector2){current_pixel.x+1, current_pixel.y};
-            push_value(indecies, ivector2, new_pos);
-            enqueue(q, ivector2, new_pos);
-            grid_coords[((current_pixel.y) * width) + current_pixel.x+1].parent_body = -1; //Set its parent_body to -1 so never visited again
-        }
-    }
-
-    free_queue(q); //Cleanup
-    return indecies;
-}
-
 list *flood_fill(ivector2 start, uint8_t *rb_layout, int width, int height) {
     //Initialising variables
     list *region_coords = list_alloc(width * height, sizeof(ivector2)); //Returning coordinates of filled points in a region of the rigidbody pixel mask
@@ -759,80 +660,13 @@ list *flood_fill(ivector2 start, uint8_t *rb_layout, int width, int height) {
  * @param world_id the box2d world we are working with
  * @param type the b2BodyType of the collider we should be generating
  */
-void construct_new_rigidbody_old(list *pixel_coords, world_grid *grid, uint8_t colour[4], float zIndex, float angle, plaza *p, b2WorldId world_id, b2BodyType type) {
-    int minX = INT_MAX, maxX = INT_MIN, minY = INT_MAX, maxY = INT_MIN;
-
-    //Getting min and max values of x and y for all coord pairs to calculate shape dimensions and centre
-    for(int i = 0; i < pixel_coords->size; i++) {
-        ivector2 coords = get_value(pixel_coords, ivector2, i);
-        // printf("P Coord: (%i, %i)\n", coords.x, coords.y);
-        if(coords.x < minX) minX = coords.x;
-        if(coords.x > maxX) maxX = coords.x;
-        if(coords.y < minY) minY = coords.y;
-        if(coords.y > maxY) maxY = coords.y;
-    }
-
-    // printf("MinX: %i, MaxX: %i, MinY: %i, MaxY: %i\n", minX, maxX, minY, maxY);
-    //Calculating dimensions and centre
-    int width = maxX - minX + 1;
-    int height = maxY - minY + 1;
-    float centreX = minX + ((width-1) * 0.5f) + 0.5f;
-    float centreY = minY + ((height-1) * 0.5f) + 0.5f;
-    //printf("Width: %i, Height: %i\n", width, height);
-    //printf("Center: (%i, %i)\n", centreX, centreY);
-
-    entity e = create_entity(p); //Creating the new entity
-
-    //Creating the new transform -> position is the new centre, but keeps old zIndex and angle
-    transform *t = create_transform((vector2){centreX, centreY}, zIndex, angle);
-    add_component_to_entity(p, e, TRANSFORM, t);
-
-    //Creating the new rigidbody -> Need to copy over the pixel coords and calculate their relative position to the new centre
-    rigidbody *rb = icreate_rigidbody_from_pixels(e, width, height, colour, (vector2){centreX, centreY}, pixel_coords, grid);
-    add_component_to_entity(p, e, RIGIDBODY, rb);
-
-    //Marching squares on the outline of the pixels
-    list *ms_points = marching_squares_old(pixel_coords, grid, e);
-    // printf("Marching Squares size: %lu\n", ms_points->size);
-    printf("Marching Squares Points:\n");
-    for(int i = 0; i < ms_points->size; i++) {
-        printf("(%i, %i), ", get_value(ms_points, ivector2, i).x, get_value(ms_points, ivector2, i).y);
-    }
-    printf("\n");
-    //Ramer-Douglas-Peucker to simplify the rdp
-    list *rdp_points = list_alloc(ms_points->size, sizeof(ivector2));
-    irdp(0, ms_points->size, 0, ms_points, rdp_points);
-    push_value(rdp_points, ivector2, get_value(rdp_points, ivector2, 0)); //Need to add to get full circle of points
-    printf("RDP Points:\n");
-    for(int i = 0; i < rdp_points->size; i++) {
-        printf("(%i, %i), ", get_value(rdp_points, ivector2, i).x, get_value(rdp_points, ivector2, i).y);
-    }
-    printf("\n");
-
-    //Convert the points into vector2 from ivector2
-    vector2 *points = malloc(sizeof(vector2) * rdp_points->size);
-    for(int i = 0; i < rdp_points->size; i++) {
-        points[i] = (vector2){get_value(rdp_points, ivector2, i).x, get_value(rdp_points, ivector2, i).y};
-    }
-
-    //Create the new polygon collider
-    collider *c = malloc(sizeof(collider));
-    c->type = POLYGON;
-    c->collider_id = create_polygon_collider(points, rdp_points->size, (vector2){centreX, centreY}, t->rotation, world_id, type);
-    add_component_to_entity(p, e, COLLIDER,  c);
-
-    free(ms_points);
-    free(rdp_points);
-    free(points);
-}
-
-//TODO: FIX PIXEL ASSINGMENTS, AS ON NEXT FRAME ITERATION, IT "DISAPPEARS" BECAUSE IT GETS INSTANTLY ERASED
 void construct_new_rigidbody(list *pixel_coords, world_grid *grid, rigidbody *old_rb, transform *old_t, plaza *p, b2WorldId world_id, b2BodyType type) {
     float minX = FLT_MAX, maxX = -FLT_MAX, minY = FLT_MAX, maxY = -FLT_MAX;
     float old_top_left_x = old_t->position.x - ((old_rb->width - 1) * 0.5);
     float old_top_left_y = old_t->position.y - ((old_rb->height - 1) * 0.5);
     list *world_coords = list_alloc(pixel_coords->size, sizeof(vector2));
 
+    printf("Pixel Coords: \n");
     for(int i = 0; i < pixel_coords->size; i++) {
         ivector2 coord = get_value(pixel_coords, ivector2, i);
         vector2 world_coord = (vector2){old_top_left_x + coord.x, old_top_left_y + coord.y};
@@ -842,16 +676,26 @@ void construct_new_rigidbody(list *pixel_coords, world_grid *grid, rigidbody *ol
         if(world_coord.x > maxX) maxX = world_coord.x;
         if(world_coord.y < minY) minY = world_coord.y;
         if(world_coord.y > maxY) maxY = world_coord.y;
+        printf("(%i, %i) ", coord.x, coord.y);
     }
+    printf("\n");
 
-    printf("MinX: %f, MaxX: %f, MinY: %f, MaxY: %f\n", minX, maxX, minY, maxY);
+    // printf("Old rigidbody mask:\n");
+    // for(int i = 0; i < old_rb->height; i++) {
+    //     for(int j = 0; j < old_rb->width; j++) {
+    //         printf("%i ", old_rb->mask[i*old_rb->width + j]);
+    //     }
+    //     printf("\n");
+    // }
+    //
+    // printf("MinX: %f, MaxX: %f, MinY: %f, MaxY: %f\n", minX, maxX, minY, maxY);
     //Calculating dimensions and centre
     int width = (int)roundf(maxX - minX + 1);
     int height = (int)roundf(maxY - minY + 1);
     float centreX = minX + ((width-1) * 0.5f);
     float centreY = minY + ((height-1) * 0.5f);
-    printf("Width: %i, Height: %i\n", width, height);
-    printf("Center: (%f, %f)\n", centreX, centreY);
+    // printf("Width: %i, Height: %i\n", width, height);
+    // printf("Center: (%f, %f)\n", centreX, centreY);
 
     entity e = create_entity(p); //Creating the new entity
 
@@ -896,7 +740,7 @@ void construct_new_rigidbody(list *pixel_coords, world_grid *grid, rigidbody *ol
 
     for(int i = 0; i < pixel_coords->size; i++) {
         ivector2 coord = get_value(pixel_coords, ivector2, i);
-        old_rb->mask[(coord.y)*rb->width + (coord.x)] = 0;
+        old_rb->mask[(coord.y*old_rb->width) + (coord.x)] = 0;
     }
     free_list(world_coords);
     free_list(ms_points);
@@ -911,58 +755,6 @@ void construct_new_rigidbody(list *pixel_coords, world_grid *grid, rigidbody *ol
  * @param grid a pointer to the world_grid where the rigidbody is located
  * @param world_id the id of the box2d world where the collider of the rigidbody is located
  */
-void split_rigidbody_old(entity id, plaza *p, world_grid *grid, b2WorldId world_id) {
-    //Getting relevant components from the entity
-    transform *t = get_component_from_entity(p, id, TRANSFORM);
-    rigidbody *rb = get_component_from_entity(p, id, RIGIDBODY);
-
-    //List to hold all of the new regions that may have been formed when the rigidbody had some of its pixels erased
-    list *new_rigidbody_regions= list_alloc(5, sizeof(list *));
-
-    //Creating a temporary duplicate of the pixel data in grid to use for flood-fill (so we don't overwrite existing data)
-    pixel *grid_pixels = malloc(sizeof(pixel) * grid->width * grid->height);
-    memcpy(grid_pixels, grid->pixels, sizeof(pixel) * grid->width * grid->height);
-
-    ivector2 *grid_coords = malloc(sizeof(ivector2) * rb->pixel_count);
-    for(int i = 0; i < rb->pixel_count; i++) {
-        // Rotate pixel_coords by rigidbody rotation
-        vector2 rotated = rotate_about_point(&rb->pixel_coords[i], &(vector2){0,0}, t->rotation, 1);
-        // Convert to integer world coordinates
-        grid_coords[i] = (ivector2){(int)roundf(rotated.x + t->position.x), (int)roundf(rotated.y + t->position.y)};
-    }
-
-    //Finding all of the seperate regions that are now contained in the old rigidbody after erasure
-    for(int i = 0; i < rb->pixel_count; i++) {
-        if(grid_pixels[(grid_coords[i].y * grid->width) + grid_coords[i].x].parent_body == id) {
-            list *region = flood_fill_old(grid_coords[i], grid_pixels, rb->pixel_count, grid->width, grid->height, id); //Getting all of the pixels in a region
-            //printf("Rigidbody region size: %lu\n", region->size);
-            if(region->size > 0){ //Adding non-empty regions to the list to be processed
-                push_value(new_rigidbody_regions, list *, region);
-            }
-        }
-    }
-
-    //printf("Num regions: %lu\n", new_rigidbody_regions->size);
-    if(new_rigidbody_regions->size > 0) {
-        collider *c = get_component_from_entity(p, id, COLLIDER);//Get the collider so we can get some of its data
-        b2BodyType type = b2Body_GetType(c->collider_id);
-        //Make new rigidbodies here
-        for(int i = 0; i < new_rigidbody_regions->size; i++) {
-            construct_new_rigidbody_old(get_value(new_rigidbody_regions, list *, i), grid, rb->colour, t->zIndex, t->rotation, p, world_id, type); //Make a new rigidbody with the given data
-        }
-    }
-
-    destroy_entity(p, id); //Destroy the original entity and its child components
-
-    //Cleanup
-    free(grid_coords);
-    free(grid_pixels);
-    for(int i = 0; i < new_rigidbody_regions->size; i++) {
-        free_list(get_value(new_rigidbody_regions, list *, i));
-    }
-    free_list(new_rigidbody_regions);
-}
-
 void split_rigidbody(entity id, plaza *p, world_grid *grid, b2WorldId world_id) {
     //Getting relevant components from the entity
     transform *t = get_component_from_entity(p, id, TRANSFORM);
@@ -986,11 +778,6 @@ void split_rigidbody(entity id, plaza *p, world_grid *grid, b2WorldId world_id) 
                 push_value(new_rigidbody_regions, list *, region);
             }
         }
-            //TODO: Do flood-fill on the pixel mask to get all of the unrotated pixels in a region
-            //      This is because if we do it on the grid, all the pixels given will already be rotated. The new rigidbody should have all of the unremoved pixels from the mask,
-            //      not from the grid, which could have some missing ones due to rotation
-            //      Same thing with collider generation. Switch it all to be mask based and not grid based
-
     }
 
     //printf("Num regions: %lu\n", new_rigidbody_regions->size);
