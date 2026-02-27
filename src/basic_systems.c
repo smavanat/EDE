@@ -201,9 +201,6 @@ void physics_system_update(plaza *p, ecs_system *s, float dt) {
         for(size_t j = 0; j < get_value(s->archetypes, archetype *, i)->size; j++) { //For every entity in that archetype
             transform *t = get_component_from_entity(p, ((archetype **)s->archetypes->data)[i]->entities[j], TRANSFORM); //Get the transform
             collider *c = get_component_from_entity(p, ((archetype **)s->archetypes->data)[i]->entities[j], COLLIDER); //Get the collider
-            // if(b2Body_GetType(c->collider_id) == b2_dynamicBody) {
-            //
-            // }
             draw_collider(c, dRenderer, (vector4){0.0f, 0.0f, 1.0f, 1.0f}); //Draw the collider for debug purposes
 
             //Set the transform position and rotation to be the collider position and rotation

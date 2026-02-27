@@ -149,9 +149,9 @@ vector2 ComputeWeightedCompoundCentroid(list *shapes) {
 
     for (int i = 0; i < shapes->size; i++) {
         //Getting the vertices
-        vector2 a = get_value(shapes, triangle_polygon, i).points[i];
-        vector2 b = get_value(shapes, triangle_polygon, i).points[i];
-        vector2 c = get_value(shapes, triangle_polygon, i).points[i];
+        vector2 a = get_value(shapes, triangle_polygon, i).points[0];
+        vector2 b = get_value(shapes, triangle_polygon, i).points[1];
+        vector2 c = get_value(shapes, triangle_polygon, i).points[2];
 
         //Getting the centroid of the triangle
         vector2 centroid = (vector2){(a.x + b.x + c.x) / 3.0f, (a.y + b.y + c.y) / 3.0f};
@@ -179,7 +179,7 @@ vector2 ComputeWeightedCompoundCentroid(list *shapes) {
  * @returns a vector2 representing the unweighted center of the shape made up of these triangles
  */
 vector2 ComputeCompoundCentroid(list *shapes) {
-    double minX = DBL_MAX, minY = DBL_MAX, maxX = DBL_MIN, maxY = DBL_MIN;
+    double minX = DBL_MAX, minY = DBL_MAX, maxX = -DBL_MAX, maxY = -DBL_MAX;
 
     //Get the bounding box:
     for(int i = 0; i < shapes->size; i++) {
@@ -188,7 +188,7 @@ vector2 ComputeCompoundCentroid(list *shapes) {
             if(tp.points[j].x < minX) minX = tp.points[j].x;
             if(tp.points[j].y < minY) minY = tp.points[j].y;
             if(tp.points[j].x > maxX) maxX = tp.points[j].x;
-            if(tp.points[j].y < maxY) maxX = tp.points[j].y;
+            if(tp.points[j].y > maxY) maxY = tp.points[j].y;
         }
     }
     return (vector2){minX + (maxX-minX)/2.0f, minY + (maxY-minY)/2.0f};
@@ -208,6 +208,7 @@ void CenterCompundShape(list *shapes, bool weighted) {
             tp.points[j].x -= compoundCentroid.x;
             tp.points[j].y -= compoundCentroid.y;
         }
+        get_value(shapes, triangle_polygon, i) = tp;
     }
 }
 
@@ -530,7 +531,7 @@ b2BodyId create_polygon_collider(vector2* points, int points_size, vector2 cente
     //Converting the points to metre units from pixel ones
     vector2 *b2_points = malloc(sizeof(vector2) * points_size);
     for(int i = 0; i < points_size; i++) {
-        b2_points[points_size - i - 1] = (vector2){(points[i].x - center.x + 1) *PIXELS_TO_METRES, (points[i].y-center.y + 1) *PIXELS_TO_METRES};
+        b2_points[points_size - i - 1] = (vector2){(points[i].x) *PIXELS_TO_METRES, (points[i].y) *PIXELS_TO_METRES};
     }
     printf("Points to partition: \n");
     for(int i = 0; i < points_size; i++) {
@@ -568,11 +569,18 @@ b2BodyId create_polygon_collider(vector2* points, int points_size, vector2 cente
     printf("\n");
 
     //Trying to center the polygon:
-    // CenterCompundShape(triangle_list);
+    CenterCompundShape(triangle_list, false);
 
     //Adding the polygons to the collider, or printing an error message if something goes wrong.
     for (int i = 0; i < triangle_list->size; i++) {
         vector2 *points = get_value(triangle_list, triangle_polygon, i).points;
+        float area = 0.5f * fabs(
+            points[0].x * (points[1].y - points[2].y) +
+            points[1].x * (points[2].y - points[0].y) +
+            points[2].x * (points[0].y - points[1].y)
+        );
+
+        if(area < 1e-6f) continue;
         b2Hull hull = b2ComputeHull(points, 3);
         if (hull.count == 0) {
             printf("Something odd has occured when generating a hull from a polyList\n");

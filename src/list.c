@@ -28,8 +28,7 @@ void grow(list *slice, size_t size) {
  * @return a pointer to the created list on the heap
  */
 list *list_alloc(size_t arr_size, size_t t_size) {
-    size_t numBytes = sizeof(list);
-    list * l = malloc(numBytes);
+    list * l = malloc(sizeof(list));
     l->data = malloc(arr_size * t_size);
     l->size = 0;
     l->capacity = arr_size;
