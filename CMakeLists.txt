@@ -2,11 +2,8 @@ cmake_minimum_required(VERSION 3.10)
 project(Engine LANGUAGES C)
 
 # Set C standard
-# set(CMAKE_CXX_STANDARD 14)
-# set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
-# set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -fsanitize=address)
 
 include(FetchContent)
 
@@ -54,12 +51,11 @@ target_include_directories(ede
     PRIVATE
         "${CMAKE_SOURCE_DIR}/externals/Include"
 )
-
-target_link_libraries(ede
-                        PRIVATE
-                        glfw
-                        box2d
-                        GL X11 pthread Xi dl m)
+if(WIN32)
+    target_link_libraries(ede PRIVATE glfw box2d opengl32 kernel32 user32 gdi32 shell32)
+else()
+    target_link_libraries(ede PRIVATE glfw box2d GL X11 pthread Xi dl m)
+endif()
 
 # Have to copy all of the assets to the output directory
 add_custom_command(TARGET ede POST_BUILD
