@@ -2,6 +2,8 @@ import sys
 import re
 import matplotlib.pyplot as plt
 
+# Helper to plot points spat out by the program (usually for visualising the output of rdp/ms)
+
 def parse_multiple_sets(input_string):
     datasets = []
 
