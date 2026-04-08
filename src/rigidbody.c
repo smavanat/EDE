@@ -537,7 +537,9 @@ int ifind_furthest(list *all_points, int a, int b, float epsilon) {
     long long len_sq = dx*dx + dy*dy;
 
     //Compute square of threshold. Use squares since this removes the floating point weirdness in an integer context that would come from using sqrt
-    long long threshold = (long long)(epsilon * epsilon * len_sq);
+    long long threshold = (long long)(epsilon * epsilon * (float)len_sq);
+    // long long threshold = (long long)(epsilon * epsilon * len_sq);
+    // long long threshold = (long long)(epsilon * epsilon * len_sq * len_sq);
 
     long long max_dist_sq = 0; //Square of the distance of the furthest point we have currently found
     int furthest = -1; //Index of the furthest point we have currently found
@@ -545,6 +547,7 @@ int ifind_furthest(list *all_points, int a, int b, float epsilon) {
         ivector2 p = get_value(all_points, ivector2, i);
         long long area = cross(start, end, p);
         long long dist_sq = area * area; //Getting the distance
+        // long long dist_sq = (area * area) / dist_sq;
 
         if(dist_sq > max_dist_sq) { //Finding the new maximum
             max_dist_sq = dist_sq;
@@ -717,7 +720,14 @@ void construct_new_rigidbody(list *pixel_coords, world_grid *grid, rigidbody *ol
     printf("\n");
     //Ramer-Douglas-Peucker to simplify the rdp
     list *rdp_points = list_alloc(ms_points->size, sizeof(ivector2));
-    irdp(0, ms_points->size, 0, ms_points, rdp_points);
+    irdp(0, ms_points->size-1, 0, ms_points, rdp_points);
+
+    //Sometimes it doesn't add the last point?
+    ivector2 last_rdp = get_value(rdp_points, ivector2, rdp_points->size-1);
+    ivector2 last_ms = get_value(ms_points, ivector2, ms_points->size-1);
+    if(last_rdp.x != last_ms.x || last_rdp.y != last_ms.y) {
+        push_value(rdp_points, ivector2, last_ms);
+    }
     push_value(rdp_points, ivector2, get_value(rdp_points, ivector2, 0)); //Need to add to get full circle of points
     printf("RDP Points:\n");
     for(int i = 0; i < rdp_points->size; i++) {
