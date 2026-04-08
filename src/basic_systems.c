@@ -39,17 +39,10 @@ void rigidbody_system_init(plaza *p, ecs_system *s) {
 void rigidbody_system_update(plaza *p, ecs_system *s, float dt) {
     double cursor_x, cursor_y; //Variables to hold the mouse cursor position
 
-    //Make a new temporary grid to make all updates on (will then swap grid buffers at the end of the function to update the grid)
-    world_grid *new_grid = malloc(sizeof(world_grid));
-    new_grid->height = grid->height;
-    new_grid->width = grid->width;
-    new_grid->pixels = malloc(sizeof(pixel) * new_grid->width * new_grid->height);
-
-    //Set everything in the new grid to be blank to start with
-    for(int i = 0; i < grid->height * grid->width; i++) {
-        memcpy(new_grid->pixels[i].colour, (uint8_t[]){0,0,0,0}, sizeof(new_grid->pixels[i].colour));
-        new_grid->pixels[i].parent_body = -1;
-    }
+    //Clearing the 'backbuffer' world_grid so we can write to it
+    uint8_t next = (gb.curr + 1) % 2;
+    world_grid *next_grid = gb.grids[next];
+    clear_grid(next_grid);
 
     for(size_t i = 0; i < s->archetypes->size; i++) { //Getting all of the archetypes for this system
         for(size_t j = 0; j < get_value(s->archetypes, archetype *, i)->size; j++) { //Getting all of the entities in an archetype
@@ -79,7 +72,7 @@ void rigidbody_system_update(plaza *p, ecs_system *s, float dt) {
             //the unrotated rigidbody and what their position would have been, and only fill those ones in
             for(int world_y = min_y; world_y <= max_y; world_y++) {
                 for(int world_x = min_x; world_x <= max_x; world_x++) {
-                    if(world_x < 0 || world_x >= new_grid->width || world_y < 0 || world_y >= new_grid->height) continue;
+                    if(world_x < 0 || world_x >= next_grid->width || world_y < 0 || world_y >= next_grid->height) continue;
 
                     // Compute world pixel center relative to object center
                     float dx = (world_x + 0.5) - t->position.x;
@@ -99,9 +92,9 @@ void rigidbody_system_update(plaza *p, ecs_system *s, float dt) {
 
                     //If the unrotated pixel is in the rigidbody's bounding box and the mask says its not erased, colour it
                     if(ix >= 0 && ix < rigidbody->width && iy >= 0 && iy < rigidbody->height && rigidbody->mask[iy * rigidbody->width + ix]) {
-                        memcpy(new_grid->pixels[world_y * new_grid->width + world_x].colour, rigidbody->colour, sizeof(new_grid->pixels[world_y * new_grid->width + world_x].colour));
+                        memcpy(next_grid->pixels[world_y * next_grid->width + world_x], rigidbody->colour, sizeof(pixel));
 
-                        new_grid->pixels[world_y * new_grid->width + world_x].parent_body = get_value(s->archetypes, archetype *, i)->entities[j];
+                        next_grid->parents[world_y * next_grid->width + world_x] = get_value(s->archetypes, archetype *, i)->entities[j];
                     }
                 }
             }
@@ -114,29 +107,29 @@ void rigidbody_system_update(plaza *p, ecs_system *s, float dt) {
 
         list *point_list = list_alloc(10, sizeof(ivector2)); //List to store coordinates of points which have been erased
         list *entity_list = list_alloc(10, sizeof(int32_t)); //List to store all of the parent entities of these rigidbodies (to prevent double rigidbody processing)
-        erase_pixels(2, cursor_x * 1/(float)PIXEL_SIZE, cursor_y * 1/(float)PIXEL_SIZE, new_grid, point_list); //Erase pixels at the current cursor position
+        erase_pixels(2, cursor_x * 1/(float)PIXEL_SIZE, cursor_y * 1/(float)PIXEL_SIZE, next_grid, point_list); //Erase pixels at the current cursor position
 
         if(point_list->size > 0)
             printf("========= NEW ERASURE ========\n");
         for(int i = 0; i < point_list->size; i++) { //For each erased point which has a rigidbody parent
             ivector2 point = get_value(point_list, ivector2, i);
-            uint32_t grid_pos = (point.y * new_grid->width) + point.x; //Get its grid index
+            uint32_t grid_pos = (point.y * next_grid->width) + point.x; //Get its grid index
 
             //Checking if we have already processed a particular rigidbody by checking if we have stored the id of its parent entity
             int index = -1;
             for(int i = 0; i < entity_list->size; i++) {
-                if(get_value(entity_list, int32_t, i) == new_grid->pixels[grid_pos].parent_body){
+                if(get_value(entity_list, int32_t, i) == next_grid->parents[grid_pos]){
                     index = i;
                     break;
                 }
             }
             //If not, mark it as processed
             if(index == -1) {
-                push_value(entity_list, int32_t, new_grid->pixels[grid_pos].parent_body);
+                push_value(entity_list, int32_t, next_grid->parents[grid_pos]);
             }
 
-            rigidbody *rb = get_component_from_entity(p, new_grid->pixels[grid_pos].parent_body, RIGIDBODY); //Get a reference to the actual rigidbody struct
-            transform *t = get_component_from_entity(p, new_grid->pixels[grid_pos].parent_body, TRANSFORM); //And to its corresponding transform
+            rigidbody *rb = get_component_from_entity(p, next_grid->parents[grid_pos], RIGIDBODY); //Get a reference to the actual rigidbody struct
+            transform *t = get_component_from_entity(p, next_grid->parents[grid_pos], TRANSFORM); //And to its corresponding transform
 
             //Get the relative position of the pixel to the rigidbody that is stored in the rigidbody struct
             vector2 d = {(point.x + 0.5) - t->position.x, (point.y + 0.5f) - t->position.y};
@@ -175,18 +168,16 @@ void rigidbody_system_update(plaza *p, ecs_system *s, float dt) {
                     }
                 }
             }
-            new_grid->pixels[grid_pos].parent_body = -1; //Need to actually set the pixel to have no parent otherwise bfs will be wierd
+            next_grid->parents[grid_pos] = -1; //Need to actually set the pixel to have no parent otherwise bfs will be wierd
         }
         //Split all processed rigidbodies
         for(int i = 0; i < entity_list->size; i++) {
             printf("================ NEW SPLIT ==============\n");
-            split_rigidbody(get_value(entity_list, int32_t, i), p, new_grid, world_id);
+            split_rigidbody(get_value(entity_list, int32_t, i), p, next_grid, world_id);
         }
     }
     //Destroy the old grid and set the new grid as the old grid
-    free(grid->pixels);
-    free(grid);
-    grid = new_grid;
+    gb.curr = next;
 }
 
 /**

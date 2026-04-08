@@ -52,8 +52,8 @@ rigidbody *create_rigidbody(uint32_t id, uint16_t width, uint16_t height, uint8_
     //Iterating over the area of the rigidbody
     for(int y = 0; y < height; y++) {
         for(int x = 0; x < width; x++) {
-            memcpy(grid->pixels[((top_left_y + y)*grid->width) + top_left_x + x].colour, colour, sizeof(grid->pixels[((top_left_y + y)*grid->width) + top_left_x + x].colour)); //Setting the grid pixels at these positions to be the colour assigned to the rigidbody
-            grid->pixels[((top_left_y + y)*grid->width) + top_left_x + x].parent_body = id; //Setting the pixel parent id to be this rigidbody's entity parent id
+            memcpy(grid->pixels[((top_left_y + y)*grid->width) + top_left_x + x], colour, sizeof(pixel)); //Setting the grid pixels at these positions to be the colour assigned to the rigidbody
+            grid->parents[((top_left_y + y)*grid->width) + top_left_x + x] = id; //Setting the pixel parent id to be this rigidbody's entity parent id
             rb->pixel_coords[(y*width) + x ] = (vector2){x - half_width, y - half_height}; //Setting the relative pixel coords inside the rigidbody
             rb->mask[(y*width) + x] = 1;
         }
@@ -97,7 +97,7 @@ rigidbody *icreate_rigidbody_from_pixels(uint32_t id, uint16_t width, uint16_t h
         float local_y = coord.y - off_y;
         rb->pixel_coords[i] = (vector2){local_x, local_y};
 
-        grid->pixels[(coord.y * grid->width) + coord.x].parent_body = id; //Setting this pixel to have this rigidbody as its grid parent
+        grid->parents[(coord.y * grid->width) + coord.x] = id; //Setting this pixel to have this rigidbody as its grid parent
         rb->mask[(int)floorf(local_y + half_height + 0.5) * width + (int)floorf(local_x +  half_width + 0.5)] = 1; //Setting the mask to be filled
     }
 
@@ -155,9 +155,9 @@ void erase_pixels(int radius, int x, int y, world_grid *grid, list *rb_pts) {
                 int dy = radius - h; // vertical offset
                 if((x + dx < grid->width) && (x + dx > -1) && (y + dy < grid->height) && (y + dy > -1)) { //If the offset is in the grid boundary
                     //Set the pixel at this grid position to be colourless as its erased
-                    memcpy(grid->pixels[(y + dy) * grid->width + (x + dx)].colour, NO_PIXEL_COLOUR, sizeof(grid->pixels[(y + dy) * grid->width + (x + dx)].colour));
+                    memcpy(grid->pixels[(y + dy) * grid->width + (x + dx)], NO_PIXEL_COLOUR, sizeof(pixel));
                     //If the pixel has a rigidbody parent, add it to rb_pts
-                    if(grid->pixels[(y + dy) * grid->width + (x + dx)].parent_body != -1) {
+                    if(grid->parents[(y + dy) * grid->width + (x + dx)] != -1) {
                         ivector2 new_pos = (ivector2){x+dx, y+dy};
                         push_value(rb_pts, ivector2, new_pos);
                     }
@@ -167,9 +167,9 @@ void erase_pixels(int radius, int x, int y, world_grid *grid, list *rb_pts) {
     }
     else { //The erasure square is only one pixel in size
         //Set teh pixel at this grid position to be colourless
-        memcpy(grid->pixels[(y * grid->width) + x].colour, NO_PIXEL_COLOUR, sizeof(grid->pixels[(y * grid->width) + x].colour));
+        memcpy(grid->pixels[(y * grid->width) + x], NO_PIXEL_COLOUR, sizeof(pixel));
         //If the pixel has a rigidbody parent, add it to rb_pts
-        if(grid->pixels[(y * grid->width) + x].parent_body != -1) {
+        if(grid->parents[(y * grid->width) + x] != -1) {
             ivector2 new_pos = (ivector2){x, y};
             push_value(rb_pts, ivector2, new_pos);
         }
@@ -201,19 +201,19 @@ int get_current_square_old(ivector2 start_coord, world_grid *grid, int32_t id) {
     int x = start_coord.x;
     int y = start_coord.y;
 
-    #define PIXEL(x, y) grid->pixels[(y)*grid->width + (x)]
+    #define PARENT(x, y) grid->parents[(y)*grid->width + (x)]
 
     // Top-left pixel
-    if (x >= 0 && x < grid->width && y >= 0 && y < grid->height && PIXEL(x, y).parent_body == id) result += 1;
+    if (x >= 0 && x < grid->width && y >= 0 && y < grid->height && PARENT(x, y)== id) result += 1;
 
     // Top-right pixel
-    if (x + 1 >= 0 && x + 1 < grid->width && y >= 0 && y < grid->height && PIXEL(x+1, y).parent_body == id) result += 2;
+    if (x + 1 >= 0 && x + 1 < grid->width && y >= 0 && y < grid->height && PARENT(x+1, y)== id) result += 2;
 
     // Bottom-left pixel
-    if (x >= 0 && x < grid->width && y + 1 >= 0 && y + 1 < grid->height && PIXEL(x, y+1).parent_body == id) result += 4;
+    if (x >= 0 && x < grid->width && y + 1 >= 0 && y + 1 < grid->height && PARENT(x, y+1) == id) result += 4;
 
     // Bottom-right pixel
-    if (x + 1 >= 0 && x + 1 < grid->width && y + 1 >= 0 && y + 1 < grid->height && PIXEL(x+1, y+1).parent_body == id) result += 8;
+    if (x + 1 >= 0 && x + 1 < grid->width && y + 1 >= 0 && y + 1 < grid->height && PARENT(x+1, y+1) == id) result += 8;
 
     return result;
 }
@@ -718,7 +718,7 @@ void construct_new_rigidbody(list *pixel_coords, world_grid *grid, rigidbody *ol
         printf("(%i, %i), ", get_value(ms_points, ivector2, i).x, get_value(ms_points, ivector2, i).y);
     }
     printf("\n");
-    //Ramer-Douglas-Peucker to simplify the rdp
+    //Ramer-Douglas-Peucker to simplify the ms
     list *rdp_points = list_alloc(ms_points->size, sizeof(ivector2));
     irdp(0, ms_points->size-1, 0, ms_points, rdp_points);
 

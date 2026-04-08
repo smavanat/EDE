@@ -2,6 +2,7 @@
 #define __RENDERER_H__
 #include <stddef.h>
 #include <stdint.h>
+#include "../include/component.h"
 #include "../include/shader.h"
 #include "../include/maths.h"
 #include "../externals/cglm/cglm.h"
@@ -156,6 +157,12 @@ void render_end_pixel_frame(pixel_renderer *r);
  * @param colour the colour of the pixel
  */
 void draw_pixel(pixel_renderer *r, uint32_t position, uint8_t colour[4]);
+/**
+ * Draws the entire grid directly on the screen by copying its entire contents into the renderer's pixel buffer
+ * @param r the pixel renderer to render to
+ * @oaram g the pixel grid whose pixels to use
+ */
+void draw_grid(pixel_renderer *r, world_grid *g);
 
 //Vertex for debugging. Simpler than the other version since its rendered directly onto the screen and not from a texture
 typedef struct {
@@ -227,5 +234,12 @@ void render_draw_point(debug_renderer *r, vector2 position, vector4 colour);
  * @param colour the colour of the circle
  */
 void render_draw_circle(debug_renderer* r, vector2 center, float radius, vector4 colour);
+/**
+ * Draws collider outlines for debugging purposes
+ * @param c a pointer to the collider whose outline needs to be drawn
+ * @param dRenderer a pointer to the debug_renderer doing the drawing
+ * @param colour the colour of the outline
+ */
+void draw_collider(collider *c, debug_renderer *dRenderer, vector4 colour);
 
 #endif

@@ -24,12 +24,10 @@ pixel_renderer *pRenderer;
 debug_renderer *dRenderer;
 b2WorldId world_id;
 GLFWwindow *gw = NULL;
-world_grid *grid = NULL;
+struct grid_buffer gb;
 
 //TODO: Need to make the list in the world that holds all the systems a priority queue so we can order the systems properly
 //      If a rigidbody drops to one pixel, just delete that rigidbody and treat the pixel as part of the pixel simulation
-//      Should just make two world grid buffers that we swap instead of constantly mallocing new ones
-//      Fix bug where erasing a dynamic box2d body also erases from the opposite side
 //NOTE: ALL RIGIDBODIES NEED TO HAVE EVEN DIMENSIONS TO ENSURE WE DON'T GET WEIRD HALF-PIXEL OFFSETS
 
 //Thank you Bernardo: https://stackoverflow.com/questions/1157209/is-there-an-alternative-sleep-function-in-c-to-milliseconds
@@ -165,15 +163,9 @@ int init(GLFWwindow **window) {
     world_init(w);
 
     //Allocating the world pixel grid
-    grid = malloc(sizeof(world_grid));
-    grid->height = PIXEL_SCREEN_HEIGHT;
-    grid->width = PIXEL_SCREEN_WIDTH;
-    grid->pixels = malloc(sizeof(pixel) * grid->height * grid->width);
-    //Setting all of the pixels to be colourless and have no rigidbody parent by default
-    for(int i = 0; i < grid->height * grid->width; i++) {
-        memcpy(grid->pixels[i].colour, (uint8_t[]){0,0,0,0}, sizeof(grid->pixels[i].colour));
-        grid->pixels[i].parent_body = -1;
-    }
+    gb.grids[0] = initialise_grid(PIXEL_SCREEN_WIDTH, PIXEL_SCREEN_HEIGHT);
+    gb.grids[1] = initialise_grid(PIXEL_SCREEN_WIDTH, PIXEL_SCREEN_HEIGHT);
+    gb.curr = 0;
 
     return 1;
 }
@@ -196,7 +188,7 @@ int load(void) {
     transform *t = create_transform((vector2){10, 10}, 0, 0);
     add_component_to_entity(w->p, r, TRANSFORM, t);
 
-    rigidbody *rb = create_rigidbody(r, 10, 6, (uint8_t[]){0xff, 0x00, 0x00, 0xff}, (t->position), grid);
+    rigidbody *rb = create_rigidbody(r, 10, 6, (uint8_t[]){0xff, 0x00, 0x00, 0xff}, (t->position), gb.grids[gb.curr]);
     add_component_to_entity(w->p, r, RIGIDBODY, rb);
 
     collider *c = malloc(sizeof(collider));
@@ -209,7 +201,7 @@ int load(void) {
     transform *tb = create_transform((vector2){40, 57}, 0, 0);
     add_component_to_entity(w->p, base, TRANSFORM, tb);
 
-    rigidbody *rbb = create_rigidbody(base, 80, 6, (uint8_t[]){0x00, 0x00, 0x00, 0xff}, (tb->position), grid);
+    rigidbody *rbb = create_rigidbody(base, 80, 6, (uint8_t[]){0x00, 0x00, 0x00, 0xff}, (tb->position), gb.grids[gb.curr]);
     add_component_to_entity(w->p, base, RIGIDBODY, rbb);
 
     collider *cb = malloc(sizeof(collider));
@@ -248,9 +240,7 @@ int main(int argc, char** argv) {
                 world_update(w, dt);
                 //Draw the pixel grid
                 render_begin_pixel_frame(pRenderer);
-                for(int i = 0; i < grid->height * grid->width; i++) {
-                    draw_pixel(pRenderer, i, grid->pixels[i].colour);
-                }
+                draw_grid(pRenderer, gb.grids[gb.curr]);
                 render_end_pixel_frame(pRenderer);
                 b2World_Step(w->world_id, 1.0f/60.0f, 4); //Update the physics
 

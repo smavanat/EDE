@@ -2,6 +2,7 @@
 #include "../include/list.h"
 #include "../include/queue.h"
 #include <float.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -622,71 +623,45 @@ vector2 rotate_translate(vector2* vector, float angle) {
 }
 
 /**
- * Draws collider outlines for debugging purposes
- * @param c a pointer to the collider whose outline needs to be drawn
- * @param dRenderer a pointer to the debug_renderer doing the drawing
- * @param colour the colour of the outline
- */
-void draw_collider(collider *c, debug_renderer *dRenderer, vector4 colour) {
-    //Getting the shapes in the collider
-    int shapeCount = b2Body_GetShapeCount(c->collider_id);
-    vector2 colliderPosition = b2Body_GetPosition(c->collider_id);
-    b2ShapeId* colliderShapes = malloc(sizeof(b2ShapeId) * shapeCount);
-    b2Body_GetShapes(c->collider_id, colliderShapes, shapeCount);
-
-    //Need to draw the different collider types differently
-    switch(c->type) {
-        case BOX:
-            for (int j = 0; j < shapeCount; j++) {
-                vector2* colliderVertices = b2Shape_GetPolygon(colliderShapes[j]).vertices;
-                vector2* rotatedVertices = (vector2*)malloc(4*sizeof(vector2));
-                for (int k = 0; k < 4; k++) {
-                    vector2 temp = rotate_translate(&colliderVertices[k], b2Rot_GetAngle(b2Body_GetRotation(c->collider_id)));
-                    rotatedVertices[k] = (vector2){(temp.x + colliderPosition.x) * METRES_TO_PIXELS * PIXEL_SIZE, (temp.y + colliderPosition.y) * PIXEL_SIZE * METRES_TO_PIXELS};
-                }
-                render_draw_quad(dRenderer, rotatedVertices, colour);
-                free(rotatedVertices);
-            }
-            break;
-        case CIRCLE:
-            for(int j = 0; j < shapeCount; j++) {
-                b2Circle circle = b2Shape_GetCircle(colliderShapes[j]);
-                render_draw_circle(dRenderer, (vector2){(circle.center.x+colliderPosition.x)* METRES_TO_PIXELS * PIXEL_SIZE, (circle.center.y+colliderPosition.y) * METRES_TO_PIXELS * PIXEL_SIZE}, circle.radius * METRES_TO_PIXELS * PIXEL_SIZE, colour);
-            }
-            break;
-        case CAPSULE:
-            for(int j = 0; j < shapeCount; j++) {
-                b2Capsule capsule = b2Shape_GetCapsule(colliderShapes[j]);
-                render_draw_circle(dRenderer, (vector2){(capsule.center1.x+colliderPosition.x)*METRES_TO_PIXELS*PIXEL_SIZE, (capsule.center1.y+colliderPosition.y) * METRES_TO_PIXELS * PIXEL_SIZE}, capsule.radius * METRES_TO_PIXELS * PIXEL_SIZE, colour);
-                render_draw_circle(dRenderer, (vector2){(capsule.center2.x+colliderPosition.x)*METRES_TO_PIXELS*PIXEL_SIZE, (capsule.center2.y+colliderPosition.y) * METRES_TO_PIXELS * PIXEL_SIZE}, capsule.radius * METRES_TO_PIXELS * PIXEL_SIZE, colour);
-            }
-            break;
-        case POLYGON:
-            //Iterate over all of the subshapes, then just draw lines between the vertices
-            for (int j = 0; j < shapeCount; j++) {
-                vector2* colliderVertices = b2Shape_GetPolygon(colliderShapes[j]).vertices;
-                vector2* rotatedVertices = (vector2*)malloc(3*sizeof(vector2));
-                for (int k = 0; k < 3; k++) {
-                    vector2 temp = rotate_translate(&colliderVertices[k], b2Rot_GetAngle(b2Body_GetRotation(c->collider_id)));
-                    rotatedVertices[k] = (vector2){(temp.x + colliderPosition.x) * METRES_TO_PIXELS * PIXEL_SIZE, (temp.y + colliderPosition.y) * METRES_TO_PIXELS * PIXEL_SIZE};
-                }
-                for (int k = 0; k < 3; k++) {
-                    render_draw_line(dRenderer, rotatedVertices[k], rotatedVertices[(k+1) % 3], colour);
-                }
-                free(rotatedVertices);
-            }
-            break;
-        default:
-            break;
-    }
-    free(colliderShapes);
-}
-
-/**
  * Destroys an existing rigidbody component
  * @param rb a pointer to a rigidbody component
  */
 void free_rigidbody(void *rb) {
     rigidbody *r = (rigidbody *)rb;
     free(r->pixel_coords);
+}
+
+/**
+ * Initialises a world_grid to be blank
+ * @param width the width of the grid
+ * @param height the height of the grid
+ * @return a pointer to the created world_grid on the heap
+ */
+world_grid *initialise_grid(uint32_t width, uint32_t height) {
+    world_grid *grid = malloc(sizeof(world_grid));
+    grid->height = height;
+    grid->width = width;
+    grid->pixels = calloc(width * height, sizeof(pixel)); //All pixels are initially 0
+    grid->parents = malloc(sizeof(int32_t) * width * height);
+    memset(grid->parents, -1, sizeof(int32_t) * width * height);
+    return grid;
+}
+
+/**
+ * Clears the pixels and parents buffers of a world_grid, setting the former to 0 and the latter to -1
+ * @param grid the grid to clear
+ */
+void clear_grid(world_grid *grid) {
+    memset(grid->pixels, 0, sizeof(uint8_t) * grid->width * grid->height * 4);
+    memset(grid->parents, -1, sizeof(int32_t) * grid->width * grid->height);
+}
+
+/**
+ * Frees a world_grid alongside its pixels and parents buffers
+ * @param grid the grid to free
+ */
+void free_grid(world_grid *grid) {
+    free(grid->parents);
+    free(grid->pixels);
+    free(grid);
 }
