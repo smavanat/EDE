@@ -14,6 +14,8 @@ extern b2WorldId world_id;
 
 void render_system_init(plaza *p, ecs_system *s);
 void render_system_update(plaza *p, ecs_system *s, float dt);
+void pixel_system_init(plaza *p, ecs_system *s);
+void pixel_system_update(plaza *p, ecs_system *s, float dt);
 void rigidbody_system_init(plaza *p, ecs_system *s);
 void rigidbody_system_update(plaza *p, ecs_system *s, float dt);
 void physics_system_init(plaza *p, ecs_system *s);

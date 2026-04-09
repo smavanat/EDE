@@ -158,6 +158,7 @@ int init(GLFWwindow **window) {
     w = world_alloc(world_id);
     add_system(w, &render_system_init, &render_system_update); //Creating the render system
     add_system(w, &physics_system_init, &physics_system_update); //Creating the physics system -> Needs to update before rigidbodies otherwise colliders appear to 'accelerate' ahead of rigidbodies
+    add_system(w, &pixel_system_init, &pixel_system_update);
     add_system(w, &rigidbody_system_init, &rigidbody_system_update); //Creating the rigidbody system
 
     world_init(w);
@@ -209,6 +210,9 @@ int load(void) {
     cb->collider_id = create_box_collider(tb->position, rbb->width, rbb->height, tb->rotation, w->world_id, b2_staticBody);
     add_component_to_entity(w->p, base, COLLIDER, cb);
 
+    // gb.grids[gb.curr]->parents[48] = -100;
+    // memcpy(gb.grids[gb.curr]->pixels[48], (uint8_t[]){0x00, 0xff, 0x00, 0xff}, sizeof(pixel));
+    //
     sys_query(w);
     return 1;
 }
@@ -236,6 +240,9 @@ int main(int argc, char** argv) {
                 // printf("\n\n");
                 // printf("================ NEW FRAME ==============\n");
 
+                // for(size_t i = 0; i < gb.grids[0]->height * gb.grids[0]->width; i++) {
+                //     if(gb.grids[0]->parents[i] < -1) printf("Filled\n");
+                // }
                 //Update the world
                 world_update(w, dt);
                 //Draw the pixel grid

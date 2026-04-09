@@ -3,6 +3,7 @@
 #include "../include/maths.h"
 #include <float.h>
 #include <math.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,9 +28,63 @@ void render_system_update(plaza *p, ecs_system *s, float dt) {
     render_end_frame(gRenderer); //Stop the texture renderer and send off remaining polys to GPU
 }
 
+/*
+ * FUNCTIONS FOR PIXEL SYSTEM
+ */
+void pixel_system_init(plaza *p, ecs_system *s) {
+    s->signature = 0;
+}
+
+//Class 00 Type 00000000000000 VelocityX 0000 VelocityY 0000 Extra(Flame Strength, Explosion Strength, Acid Strength? 2 per each) 00000000
+
+void update_pixel(world_grid *og, world_grid *ng, size_t index) {
+    if(og->parents[index] < -1 && (index / og->width) < og->height - 1) {
+        if(og->parents[index + og->width] == -1) {
+            ng->parents[index+og->width] = -2;
+            memcpy(ng->pixels[index+og->width], (uint8_t[]){0xd6, 0xcd, 0x18, 0xff}, sizeof(pixel));
+        }
+        else if(index % og->width != 0 && og->parents[index + og->width-1] == -1) {
+            ng->parents[index+og->width-1] = -2;
+            memcpy(ng->pixels[index+og->width-1], (uint8_t[]){0xd6, 0xcd, 0x18, 0xff}, sizeof(pixel));
+        }
+        else if(index % og->width != og->width-1 && og->parents[index + og->width+1] == -1) {
+            ng->parents[index+og->width+1] = -2;
+            memcpy(ng->pixels[index+og->width+1], (uint8_t[]){0xd6, 0xcd, 0x18, 0xff}, sizeof(pixel));
+        }
+        else {
+            ng->parents[index] = -2;
+            memcpy(ng->pixels[index], (uint8_t[]){0xd6, 0xcd, 0x18, 0xff}, sizeof(pixel));
+        }
+    }
+}
+
+void pixel_system_update(plaza *p, ecs_system *s, float dt) {
+    static int left = 0;
+    world_grid *old_grid = gb.grids[gb.curr];
+    world_grid *new_grid = gb.grids[(gb.curr+1)%2];
+
+    old_grid->parents[48] = -100;
+    memcpy(old_grid->pixels[48], (uint8_t[]){0xd6, 0xcd, 0x18, 0xff}, sizeof(pixel));
+
+    clear_grid(new_grid);
+
+    if(left) {
+        for(size_t i = 0; i < old_grid->height * old_grid->width; i++) {
+            update_pixel(old_grid, new_grid, i);
+        }
+    }
+    else {
+        for(size_t i = old_grid->height * old_grid->width; i > 0; i--) {
+            update_pixel(old_grid, new_grid, i-1);
+        }
+    }
+
+    left = (left+1) %2;
+}
+
 /**
-* FUNCTIONS FOR THE RIGIDBODY RENDERING SYSTEM
-*/
+ * FUNCTIONS FOR THE RIGIDBODY SYSTEM
+ */
 void rigidbody_system_init(plaza *p, ecs_system *s) {
     s->signature = 0 | (1 << RIGIDBODY) | (1 << TRANSFORM);
 }
@@ -42,7 +97,7 @@ void rigidbody_system_update(plaza *p, ecs_system *s, float dt) {
     //Clearing the 'backbuffer' world_grid so we can write to it
     uint8_t next = (gb.curr + 1) % 2;
     world_grid *next_grid = gb.grids[next];
-    clear_grid(next_grid);
+    // clear_grid(next_grid);
 
     for(size_t i = 0; i < s->archetypes->size; i++) { //Getting all of the archetypes for this system
         for(size_t j = 0; j < get_value(s->archetypes, archetype *, i)->size; j++) { //Getting all of the entities in an archetype
