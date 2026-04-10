@@ -55,8 +55,7 @@ void update_pixel(world_grid *og, world_grid *ng, size_t index, int dir) {
                 }
             }
             else {
-                if(index % og->width != 0 && og->data[left] == 0 && ng->data[left] == 0) {
-                    new_index = left;
+                if(index % og->width != 0 && og->data[left] == 0 && ng->data[left] == 0) { new_index = left;
                 }
                 else if(index % og->width != og->width-1 && og->data[right] == 0 && ng->data[right] == 0) {
                     new_index = right;
@@ -274,5 +273,18 @@ void physics_system_update(plaza *p, ecs_system *s, float dt) {
             t->rotation = normalise_angle(b2Rot_GetAngle(b2Body_GetRotation(c->collider_id)));
             t->position = (vector2){temp.x*METRES_TO_PIXELS, temp.y * METRES_TO_PIXELS};
         }
+    }
+}
+
+/**
+ * FUNCTIONS FOR THE UI SYSTEM:
+ */
+void ui_system_init(plaza *p, ecs_system *s) {
+    s->signature = 0 | (1 << BUTTON) | (1 << TRANSFORM) | (1 << SPRITE);
+}
+
+void ui_system_update(plaza *p, ecs_system *s, float dt) {
+    if(glfwGetWindowAttrib(gw, GLFW_FOCUSED)) {
+
     }
 }

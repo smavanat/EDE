@@ -1,7 +1,6 @@
 #ifndef __COMPONENT_H__
 #define __COMPONENT_H__
 #include "maths.h"
-// #include "../externals/GLFW/glfw3.h"
 #include "pixel_sim.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -168,10 +167,11 @@ typedef struct {
  */
 void free_rigidbody(void *rb);
 
-// typedef struct {
-//     void (*cb)(GLFWwindow *gw, ...);
-// } button;
-//
+typedef struct {
+    void (*cb)(int n, ...);
+    ivector2 bounds;
+} button;
+
 typedef struct {
     uint16_t width;
     uint16_t height;
