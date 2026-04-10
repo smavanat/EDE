@@ -6,7 +6,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <sys/time.h>
 #include "../externals/glad/glad.h"
 #include "../externals/GLFW/glfw3.h"
@@ -28,6 +27,7 @@ struct grid_buffer gb;
 
 //TODO: Need to make the list in the world that holds all the systems a priority queue so we can order the systems properly
 //      If a rigidbody drops to one pixel, just delete that rigidbody and treat the pixel as part of the pixel simulation
+//      Make a UI for selecting the type of pixel we want to add to the world
 //NOTE: ALL RIGIDBODIES NEED TO HAVE EVEN DIMENSIONS TO ENSURE WE DON'T GET WEIRD HALF-PIXEL OFFSETS
 
 //Thank you Bernardo: https://stackoverflow.com/questions/1157209/is-there-an-alternative-sleep-function-in-c-to-milliseconds

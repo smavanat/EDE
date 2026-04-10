@@ -157,7 +157,7 @@ void erase_pixels(int radius, int x, int y, world_grid *grid, list *rb_pts) {
                     //Set the pixel at this grid position to be colourless as its erased
                     memcpy(grid->pixels[(y + dy) * grid->width + (x + dx)], NO_PIXEL_COLOUR, sizeof(pixel));
                     //If the pixel has a rigidbody parent, add it to rb_pts
-                    if(grid->parents[(y + dy) * grid->width + (x + dx)] != -1) {
+                    if(grid->parents[(y + dy) * grid->width + (x + dx)] > -1) {
                         ivector2 new_pos = (ivector2){x+dx, y+dy};
                         push_value(rb_pts, ivector2, new_pos);
                     }
@@ -169,7 +169,7 @@ void erase_pixels(int radius, int x, int y, world_grid *grid, list *rb_pts) {
         //Set teh pixel at this grid position to be colourless
         memcpy(grid->pixels[(y * grid->width) + x], NO_PIXEL_COLOUR, sizeof(pixel));
         //If the pixel has a rigidbody parent, add it to rb_pts
-        if(grid->parents[(y * grid->width) + x] != -1) {
+        if(grid->parents[(y * grid->width) + x] > -1) {
             ivector2 new_pos = (ivector2){x, y};
             push_value(rb_pts, ivector2, new_pos);
         }
@@ -720,7 +720,7 @@ void construct_new_rigidbody(list *pixel_coords, world_grid *grid, rigidbody *ol
     printf("\n");
     //Ramer-Douglas-Peucker to simplify the ms
     list *rdp_points = list_alloc(ms_points->size, sizeof(ivector2));
-    irdp(0, ms_points->size-1, 0, ms_points, rdp_points);
+    irdp(0, ms_points->size-1, 0.6f, ms_points, rdp_points);
 
     //Sometimes it doesn't add the last point?
     ivector2 last_rdp = get_value(rdp_points, ivector2, rdp_points->size-1);
@@ -728,7 +728,7 @@ void construct_new_rigidbody(list *pixel_coords, world_grid *grid, rigidbody *ol
     if(last_rdp.x != last_ms.x || last_rdp.y != last_ms.y) {
         push_value(rdp_points, ivector2, last_ms);
     }
-    push_value(rdp_points, ivector2, get_value(rdp_points, ivector2, 0)); //Need to add to get full circle of points
+    // push_value(rdp_points, ivector2, get_value(rdp_points, ivector2, 0)); //Need to add to get full circle of points //NOTE: Think don't need?
     printf("RDP Points:\n");
     for(int i = 0; i < rdp_points->size; i++) {
         printf("(%i, %i), ", get_value(rdp_points, ivector2, i).x, get_value(rdp_points, ivector2, i).y);
