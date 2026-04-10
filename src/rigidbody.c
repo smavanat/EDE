@@ -157,7 +157,7 @@ void erase_pixels(int radius, int x, int y, world_grid *grid, list *rb_pts) {
                     //Set the pixel at this grid position to be colourless as its erased
                     memcpy(grid->pixels[(y + dy) * grid->width + (x + dx)], NO_PIXEL_COLOUR, sizeof(pixel));
                     //If the pixel has a rigidbody parent, add it to rb_pts
-                    if(grid->parents[(y + dy) * grid->width + (x + dx)] > -1) {
+                    if(grid->parents[(y + dy) * grid->width + (x + dx)] > 0) {
                         ivector2 new_pos = (ivector2){x+dx, y+dy};
                         push_value(rb_pts, ivector2, new_pos);
                     }
@@ -169,7 +169,7 @@ void erase_pixels(int radius, int x, int y, world_grid *grid, list *rb_pts) {
         //Set teh pixel at this grid position to be colourless
         memcpy(grid->pixels[(y * grid->width) + x], NO_PIXEL_COLOUR, sizeof(pixel));
         //If the pixel has a rigidbody parent, add it to rb_pts
-        if(grid->parents[(y * grid->width) + x] > -1) {
+        if(grid->parents[(y * grid->width) + x] > 0) {
             ivector2 new_pos = (ivector2){x, y};
             push_value(rb_pts, ivector2, new_pos);
         }

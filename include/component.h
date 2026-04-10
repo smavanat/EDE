@@ -1,9 +1,10 @@
 #ifndef __COMPONENT_H__
 #define __COMPONENT_H__
 #include "maths.h"
+// #include "../externals/GLFW/glfw3.h"
+#include "pixel_sim.h"
 #include <stdbool.h>
 #include <stdint.h>
-// #include "renderer.h"
 
 typedef struct {
     vector2 points[3];
@@ -20,7 +21,7 @@ typedef enum{
     COLLIDER,
     // PATHFINDING,
     RIGIDBODY,
-    // PIXEL,
+    BUTTON,
     NUM_COMPONENTS //Used for counting the number of components
 } component_type;
 
@@ -167,11 +168,16 @@ typedef struct {
  */
 void free_rigidbody(void *rb);
 
+// typedef struct {
+//     void (*cb)(GLFWwindow *gw, ...);
+// } button;
+//
 typedef struct {
     uint16_t width;
     uint16_t height;
     pixel *pixels;
-    int32_t *parents; //TODO: Check if we can change the type to store less data
+    uint32_t *parents; //TODO: Check if we can change the type to store less data
+    pixel_data *data;
 
 } world_grid;
 

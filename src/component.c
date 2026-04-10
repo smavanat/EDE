@@ -1,12 +1,12 @@
 #include "../include/component.h"
 #include "../include/list.h"
 #include "../include/queue.h"
+#include "../externals/glad/glad.h"
 #include <float.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include "../externals/glad/glad.h"
 
 /**
  * Creates a new transform component
@@ -668,8 +668,8 @@ world_grid *initialise_grid(uint32_t width, uint32_t height) {
     grid->height = height;
     grid->width = width;
     grid->pixels = calloc(width * height, sizeof(pixel)); //All pixels are initially 0
-    grid->parents = malloc(sizeof(int32_t) * width * height);
-    memset(grid->parents, -1, sizeof(int32_t) * width * height);
+    grid->parents = calloc(width * height, sizeof(uint32_t));
+    grid->data = calloc(width * height, sizeof(pixel_data));
     return grid;
 }
 
@@ -679,7 +679,8 @@ world_grid *initialise_grid(uint32_t width, uint32_t height) {
  */
 void clear_grid(world_grid *grid) {
     memset(grid->pixels, 0, sizeof(uint8_t) * grid->width * grid->height * 4);
-    memset(grid->parents, -1, sizeof(int32_t) * grid->width * grid->height);
+    memset(grid->parents, 0, sizeof(uint32_t) * grid->width * grid->height);
+    memset(grid->data, 0, sizeof(pixel_data) * grid->width * grid->height);
 }
 
 /**

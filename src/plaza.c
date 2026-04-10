@@ -14,7 +14,7 @@ plaza *init_plaza(void) {
     //Entity Allocator
     p->entities = malloc(sizeof(entity_pool)); //Creating the entity pool allocator
     //Allocating the entities in the pool
-    for(int i = 0; i < MAX_ENTITIES; i++) {
+    for(int i = 1; i < MAX_ENTITIES; i++) {
         p->entities->freeList[i] = MAX_ENTITIES - i - 1; //Reverse order for reuse;
     }
     p->entities->top = MAX_ENTITIES - 1; //Setting the first entity so we can use the reverse order

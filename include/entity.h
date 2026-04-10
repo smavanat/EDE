@@ -4,5 +4,5 @@
 #include <stdint.h>
 #define MAX_ENTITIES (4096)
 
-typedef int32_t entity;
+typedef uint32_t entity;
 #endif

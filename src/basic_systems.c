@@ -42,23 +42,23 @@ void update_pixel(world_grid *og, world_grid *ng, size_t index, int dir) {
     size_t right = index + og->width+1;
 
     if((index / og->width) < og->height - 1) {
-        if(og->parents[bottom] == -1 && ng->parents[bottom] == -1) {
+        if(og->data[bottom] == 0 && ng->data[bottom] == 0) {
             new_index = bottom;
         }
         else {
             if(dir) {
-                if(index % og->width != og->width-1 && og->parents[right] == -1 && ng->parents[right] == -1) {
+                if(index % og->width != og->width-1 && og->data[right] == 0 && ng->data[right] == 0) {
                     new_index = right;
                 }
-                else if(index % og->width != 0 && og->parents[left] == -1 && ng->parents[left] == -1) {
+                else if(index % og->width != 0 && og->data[left] == 0 && ng->data[left] == 0) {
                     new_index = left;
                 }
             }
             else {
-                if(index % og->width != 0 && og->parents[left] == -1 && ng->parents[left] == -1) {
+                if(index % og->width != 0 && og->data[left] == 0 && ng->data[left] == 0) {
                     new_index = left;
                 }
-                else if(index % og->width != og->width-1 && og->parents[right] == -1 && ng->parents[right] == -1) {
+                else if(index % og->width != og->width-1 && og->data[right] == 0 && ng->data[right] == 0) {
                     new_index = right;
                 }
             }
@@ -66,8 +66,8 @@ void update_pixel(world_grid *og, world_grid *ng, size_t index, int dir) {
     }
 
     //So we don't overwrite existing cells
-    if(ng->parents[new_index] == -1) {
-        ng->parents[new_index] = -2;
+    if(ng->data[new_index] == 0) {
+        ng->data[new_index] = 1;
         memcpy(ng->pixels[new_index], (uint8_t[]){0xd6, 0xcd, 0x18, 0xff}, sizeof(pixel));
     }
 }
@@ -77,8 +77,8 @@ void pixel_system_update(plaza *p, ecs_system *s, float dt) {
     world_grid *old_grid = gb.grids[gb.curr];
     world_grid *new_grid = gb.grids[(gb.curr+1)%2];
 
-    // old_grid->parents[48] = -100;
-    // memcpy(old_grid->pixels[48], (uint8_t[]){0xd6, 0xcd, 0x18, 0xff}, sizeof(pixel));
+    old_grid->data[48] = 100;
+    memcpy(old_grid->pixels[48], (uint8_t[]){0xd6, 0xcd, 0x18, 0xff}, sizeof(pixel));
 
     clear_grid(new_grid);
 
@@ -86,13 +86,13 @@ void pixel_system_update(plaza *p, ecs_system *s, float dt) {
     for(size_t i = old_grid->height; i > 0; i--) {
         if(dir) {
             for(size_t j = 0; j < old_grid->width; j++) {
-                if(old_grid->parents[((i-1) * old_grid->width) + j] < -1)
+                if(old_grid->data[((i-1) * old_grid->width) + j] > 0 && old_grid->parents[((i-1) * old_grid->width) + j] == 0)
                     update_pixel(old_grid, new_grid, ((i-1) * old_grid->width) + j, dir);
             }
         }
         else {
             for(size_t j = old_grid->width; j > 0; j--) {
-                if(old_grid->parents[((i-1) * old_grid->width) + j-1] < -1)
+                if(old_grid->data[((i-1) * old_grid->width) + j-1] > 0 && old_grid->parents[((i-1) * old_grid->width) + j-1] == 0)
                     update_pixel(old_grid, new_grid, ((i-1) * old_grid->width) + j-1, dir);
             }
         }
@@ -169,6 +169,7 @@ void rigidbody_system_update(plaza *p, ecs_system *s, float dt) {
                         memcpy(next_grid->pixels[world_y * next_grid->width + world_x], rigidbody->colour, sizeof(pixel));
 
                         next_grid->parents[world_y * next_grid->width + world_x] = get_value(s->archetypes, archetype *, i)->entities[j];
+                        next_grid->data[world_y * next_grid->width + world_x] = 2;
                     }
                 }
             }
