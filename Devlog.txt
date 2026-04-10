@@ -1,0 +1,65 @@
+This is a devlog (mostly for personal use) that I have decided to start since this project is getting quite large and I think it will be useful to have someplace to put my thoughts down where I can go back and read them in the future to see what I was thinking/planning. I don't know how regularly I will update this, I will try weekly updates (when I am actively working on it), but we shall see.
+
+8/4/26
+I decided to get back into this project after watching this video reignited my interest in gamedev (sorry termz): https://www.youtube.com/watch?v=-QL42dGHsmY
+I finally decided to go fix that collider generation bug that I found ages ago. In order to help me I got ChatGPT to vibecode me a python script to plot points on a graph so I could easily visualise what marching squares/rdp/triangulation where doing instead of plotting it all manually in desmos like I was doing like a caveman and all I can say is OMFG WHY DIDN'T I DO IT SOONER. I guess it really is worth investing even in minor tooling. Well I've only been coding for over four years.
+Also, I fixed the bug, turns out there were two. For some reason I had thought that subtracting 1 from the size of the number of marching squares points when passing it in as the end index in this line:
+    irdp(0, ms_points->size-1, 0.6f, ms_points, rdp_points);
+broke the code, even though it didn't and caused the rdp to use garbage values which broke the partitioning. Also sometimes the last point from marching squares didn't get used so I had to do this annoying fix:
+    ivector2 last_rdp = get_value(rdp_points, ivector2, rdp_points->size-1);
+    ivector2 last_ms = get_value(ms_points, ivector2, ms_points->size-1);
+    if(last_rdp.x != last_ms.x || last_rdp.y != last_ms.y) {
+        push_value(rdp_points, ivector2, last_ms);
+    }
+
+I also finally switched to just keeping two world_grid structs constantly in memory instead of always mallocing a new one. Took me long enough. In the spirit of optimisation I also split the pixel struct into two separate parts stored in separate buffers, colours and parents in the world grid for better cache optimisaiton (Data-Oriented Design/ACA coming in handy there). Otherwise its functionally the same.
+
+I've started working on a hacky implementation of the pixel simulation now that I think rigidbodies are done. It's supposed to be pretty simple for now, just doing sand. The idea is that we add in a new sand particle every frame so that it falls to the ground and makes a big pile but nothing is appearing and idk why. It seems to stop after one fall. I did it using my vague memory of that nolla games dev talk (which I can't seem to find?) where they talked about having to switch direction every frame from top to bottom to bottom to top
+
+9/4/26
+FIXED IT.
+
+It was because my bottom to top loop was indexing wrong. Turns out this moron forgot how unsigned integers work and was letting his iterator variable decrement all the way down to -1 like so:
+    for(size_t i = old_grid->height-1; i > -1; i--) {
+meaning it wrapped back around to MAX_INT, causing all sorts of issues. Basically just make it stop at 1, and then subtract one when using it in a method call, like so:
+    for(size_t i = old_grid->height; i > 0; i--) {
+
+The pixels move too fast. Maybe its because they're too big, not sure. Need to see how the other guys that I found like this one: https://github.com/GameEngineering/EP01_SandSim do it
+
+10/4/26
+Created pixel_sim.h and pixel_sim.c.
+Decided that the pixel data would be stored as a 'typedef uint32_t pixel_data'.
+The data would be stored on a bit level in the following format:
++------------+---------+-----------+-----------+--------+
+|    Type    | Variant | VelocityX | VelocityY | Health |
+|000000000000|  0000   |   00000   |   00000   | 000000 |
++------------+---------+-----------+-----------+--------+
+Type is the type of the pixel (sand, water, wood, stone, acid, etc).
+Variant  is used for colouring. For example, even the same chunk of wood can have pixels of different shades ofbrown to break up the monotony. Moreover, there should also be a separate variant for burnt wood.
+VelocityX and VelocityY are self explanatory.
+Health represents the health (or lifetime) of the pixel at the current moment.
+Ideally we would want to have at least one of these values (probably type) always guaranteed to be non-zero, so that we could use 0 as a sentinel value to represent an empty pixel
+
+The idea with this system is that we can store data that relates to an entire pixel type (flammability, weakness to acid, etc.) in a lookup table and does not have to be stored by each individual pixel. Then, we could make a giant switch-based function (like we already do for component types etc) to determine what happens to each pixel type each frame. Then, when a specific branch of the function, we use the data in the pixel_data alongside the values in the lookup table to update the pixel.
+
+Speaking of updates, I finally found that long nolla games dev talk video on youtube: https://www.youtube.com/watch?v=Mr3E_voEG8Y. I changed my update calls so it was more in line with what they said, instead of alternating between going bottom to top and top to bottom, I alwawys now go bottom to top, and instead I now alternate the direction of rows. E.g. on the first row of a pass we go left to right, then right to left, and then left to right and so on, and then on the next iteration we go right to left, left to right, right to left and so on.This did have a slight effect, in the original version it would always go left then right, but (I think????) in this version it is fairly even.
+
+I changed entity IDs like I had been meaning to do for a while, no longer wasting 2^16 possibilities. Entities are now uint32_t as opposed to int32_t, and now just 0 is the reserved value to mean an uninitialised entity (should probably add comments in the code explaining this). This wastes far fewer values and possibly opens them to being compressed to a smaller uint16_t if I feel we don't need more than 2^16 entities in the final project.
+
+I also split the grid into colours, parents, and data maps, instead of just colours and parents. The purposes of these are:
+colours: stores the colours of the pixels (could be removed and just write directly to the pixel renderer in future?)
+parents: stores the parent rigidbody of a pixel if it has one. Thanks to the changes to entities, 0 is used to represent a parentless pixel
+data: stores the pixel_data of each pixel. 0 is also used a sentinel value for an empty pixel (see above for reasoning)
+
+Currently only colours and parents are actually used properly. data is not used since we currently only have a primitive system that only supports a 'sand' pixel type, and I haven't had time to implement something better. In the pixel_sim.h/c files, I have added some bitwise getters and setters to get the values within a pixel_data uint32_t, so those will be used in the future. I also tried implementing a lookup table with enum indecies, but gcc complained about it idk why, so I commented it out (the enum indecies are still there though).
+
+I also discovered another bug with the rigidbody collider generation, this time with the triangle partitioning again. Claude claimed that it was because I was passing adjacent colinear points to the partitioning function, so it spat out a helper to get rid of them. This seems to have fixed the issue. Another problem that I found is that some of the triangles passed to box2d by the partition are too small. Increasing the epsilon did fix this, but obviously this also decreases the accuracy of the colliders. It's currently at 0.6, which seems to be a good value for now.
+
+My current plan is to add a primitive UI that will allow to to switch between different pixel types and let me paint them on the screen (or the eraser). This will fix the existing issue of me erasing when I didn't plan to because I don't have any control over it, and give me some more control over how the pixels are laid out without having to actually load something to a file. So you know, more simple tooling. Once I have the UI, then I can actually flesh out the pixel implementation since I will have a way to properly test it and not just have it magically fall from the sky. I also need to figure out proper interactions with the rigidbody pixels (need to re-watch petri purho's gdc video again). My current progress is a button struct:
+    typedef struct {
+        void (*cb)(int n, ...);
+        ivector2 bounds;
+    } button;
+Note the callback function pointer so we can add functionality to it when clicked, and an ivector2 to show the clicking bounds. I've also made the skeleton of a UI system. Its entities must have a button (obviously) a transform (for world position) and sprite (since idk how the UI is going to interact with the pixel stuff, I'd much rather use a sprite than draw pixels since its easier and separate so I don't have to deal with that headache for now, its a problem for future me if we keep it separate or not).
+
+That is literally all that exists for it, and it will probably change drastically very soon, so I will not go into more detail for now
