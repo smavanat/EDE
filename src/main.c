@@ -14,6 +14,7 @@
 #include "../include/world.h"
 #include "../include/renderer.h"
 #include "../include/rigidbody.h"
+#include "../include/input.h"
 
 #define FRAME_RATE 1000 / 60.0f
 
@@ -24,6 +25,7 @@ debug_renderer *dRenderer;
 b2WorldId world_id;
 GLFWwindow *gw = NULL;
 struct grid_buffer gb;
+input_handler *handler;
 
 //TODO: Need to make the list in the world that holds all the systems a priority queue so we can order the systems properly
 //      If a rigidbody drops to one pixel, just delete that rigidbody and treat the pixel as part of the pixel simulation
@@ -118,7 +120,11 @@ int init(GLFWwindow **window) {
         return 0;
     }
     glfwMakeContextCurrent(*window);
+    handler = input_handler_init();
     glfwSetFramebufferSizeCallback(*window, framebuffer_size_callback);
+    glfwSetKeyCallback(*window, glfw_key_callback);
+    glfwSetMouseButtonCallback(*window, glfw_mouse_callback);
+    glfwSetCursorPosCallback(*window, glfw_cursor_pos_callback);
 
     //Loading GLAD
     if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {

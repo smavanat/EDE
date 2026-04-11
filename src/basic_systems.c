@@ -76,6 +76,7 @@ void pixel_system_update(plaza *p, ecs_system *s, float dt) {
     world_grid *old_grid = gb.grids[gb.curr];
     world_grid *new_grid = gb.grids[(gb.curr+1)%2];
 
+    //Adding a new particle every frame just for testing
     old_grid->data[48] = 100;
     memcpy(old_grid->pixels[48], (uint8_t[]){0xd6, 0xcd, 0x18, 0xff}, sizeof(pixel));
 
@@ -110,7 +111,7 @@ void rigidbody_system_init(plaza *p, ecs_system *s) {
 //This function is very poorly written as I am just trying to figure out how things will work. Needs to be re-written in a cleaner format latter.
 //Possibly with different parts separated out
 void rigidbody_system_update(plaza *p, ecs_system *s, float dt) {
-    double cursor_x, cursor_y; //Variables to hold the mouse cursor position
+    double cursor_x = handler->mouseX, cursor_y = handler->mouseY; //Variables to hold the mouse cursor position
 
     //Clearing the 'backbuffer' world_grid so we can write to it
     uint8_t next = (gb.curr + 1) % 2;
@@ -177,7 +178,6 @@ void rigidbody_system_update(plaza *p, ecs_system *s, float dt) {
 
     //Do pixel erasure after updating all of the grid pixel data
     if (glfwGetWindowAttrib(gw, GLFW_FOCUSED)) { //Only erase when the window is in focus.
-        glfwGetCursorPos(gw, &cursor_x, &cursor_y); //Get the mouse position
 
         list *point_list = list_alloc(10, sizeof(ivector2)); //List to store coordinates of points which have been erased
         list *entity_list = list_alloc(10, sizeof(int32_t)); //List to store all of the parent entities of these rigidbodies (to prevent double rigidbody processing)

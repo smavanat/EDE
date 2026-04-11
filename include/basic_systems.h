@@ -1,6 +1,7 @@
 #ifndef __BASIC_SYSTEMS_H__
 #define __BASIC_SYSTEMS_H__
 #include "component.h"
+#include "input.h"
 #include "renderer.h"
 #include "system.h"
 #include "../externals/GLFW/glfw3.h"
@@ -11,6 +12,7 @@ extern debug_renderer *dRenderer;
 extern GLFWwindow *gw;
 extern struct grid_buffer gb;
 extern b2WorldId world_id;
+extern input_handler *handler;
 
 void render_system_init(plaza *p, ecs_system *s);
 void render_system_update(plaza *p, ecs_system *s, float dt);

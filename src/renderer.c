@@ -1,4 +1,5 @@
 #include "../include/renderer.h"
+#include "../include/shader.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>

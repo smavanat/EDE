@@ -3,7 +3,6 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "../include/component.h"
-#include "../include/shader.h"
 #include "../include/maths.h"
 #include "../externals/cglm/cglm.h"
 
@@ -54,7 +53,7 @@ typedef struct {
     uint32_t vao; //vao this renderer uses
     uint32_t vbo; //vbo this renderer uses
     uint32_t ebo; //ebo this renderer uses
-    shader shader; //shader this renderer uses
+    uint32_t shader; //shader this renderer uses
     mat4 projection; //projection matrix for this renderer
 
     render_vertex vertex_data[MAX_VERTICES]; //The render vertex data for this renderer
@@ -119,7 +118,7 @@ typedef struct {
     uint32_t vao; //vao this renderer uses
     uint32_t vbo; //vbo this renderer uses
     uint32_t ebo; //ebo this renderer uses
-    shader shader; //shader this renderer uses
+    uint32_t shader; //shader this renderer uses
     mat4 projection; //projection matrix for this renderer
 
     //Stuff for pixel rendering:
@@ -175,7 +174,7 @@ typedef struct {
     uint32_t vao; //vao this renderer uses
     uint32_t vbo; //vbo this renderer uses
     uint32_t ebo; //ebo this renderer uses
-    shader shader; //shader this renderer uses
+    uint32_t shader; //shader this renderer uses
     mat4 projection; //projection matrix for this renderer
 
     size_t point_count; //Separate count for points since can draw them differenttly to other primites (since all other primitives are just lines)
