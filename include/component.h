@@ -168,9 +168,13 @@ typedef struct {
 void free_rigidbody(void *rb);
 
 typedef struct {
-    void (*cb)(int n, ...);
+    void (*cb)(void *args);
+    void *cb_args;
     ivector2 bounds;
 } button;
+
+button *create_button(void (*cb)(void *args), void *cb_args, ivector2 bounds);
+void free_button(void *bt);
 
 typedef struct {
     uint16_t width;
@@ -202,9 +206,9 @@ void free_grid(world_grid *grid);
 /**
  * Holds the two grids that we swap between and their current index
  */
-struct grid_buffer {
+typedef struct {
     uint8_t curr;
     world_grid *grids[2];
-};
+} grid_buffer ;
 
 #endif

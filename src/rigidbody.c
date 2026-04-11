@@ -155,7 +155,7 @@ void erase_pixels(int radius, int x, int y, world_grid *grid, list *rb_pts) {
                 int dy = radius - h; // vertical offset
                 if((x + dx < grid->width) && (x + dx > -1) && (y + dy < grid->height) && (y + dy > -1)) { //If the offset is in the grid boundary
                     //Set the pixel at this grid position to be colourless as its erased
-                    memcpy(grid->pixels[(y + dy) * grid->width + (x + dx)], NO_PIXEL_COLOUR, sizeof(pixel));
+                    grid->data[(y + dy) * grid->width + (x + dx)] = 0;
                     //If the pixel has a rigidbody parent, add it to rb_pts
                     if(grid->parents[(y + dy) * grid->width + (x + dx)] > 0) {
                         ivector2 new_pos = (ivector2){x+dx, y+dy};
@@ -166,8 +166,8 @@ void erase_pixels(int radius, int x, int y, world_grid *grid, list *rb_pts) {
         }
     }
     else { //The erasure square is only one pixel in size
-        //Set teh pixel at this grid position to be colourless
-        memcpy(grid->pixels[(y * grid->width) + x], NO_PIXEL_COLOUR, sizeof(pixel));
+        //Set the pixel at this grid position to be colourless
+        grid->data[(y  * grid->width) + x ] = 0;
         //If the pixel has a rigidbody parent, add it to rb_pts
         if(grid->parents[(y * grid->width) + x] > 0) {
             ivector2 new_pos = (ivector2){x, y};

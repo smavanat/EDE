@@ -1,4 +1,5 @@
 #include "../include/input.h"
+#include <stdio.h>
 #include <stdlib.h>
 
 input_handler *input_handler_init(void) {
@@ -60,6 +61,13 @@ void glfw_key_callback(GLFWwindow *window, int key, int scancode, int action, in
                 handler->key_status[idx] = KEY_RELEASED;
             }
         }
+    }
+}
+
+void update_key_state(input_handler *ih) {
+    for(int i = 0; i < NUM_KEYS; i++) {
+        if(ih->key_status[i] == KEY_JUST_PRESSED) ih->key_status[i] = KEY_PRESSED;
+        if(ih->key_status[i] == KEY_JUST_RELEASED) ih->key_status[i] = KEY_RELEASED;
     }
 }
 

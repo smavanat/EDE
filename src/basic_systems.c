@@ -1,6 +1,6 @@
 #include "../include/basic_systems.h"
 #include "../include/rigidbody.h"
-#include "../include/maths.h"
+// #include "../include/maths.h"
 #include <float.h>
 #include <math.h>
 #include <stddef.h>
@@ -9,11 +9,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+queue *pixel_func_queue;
+
 /**
 * FUNCTIONS FOR THE RENDERING SYSTEM
 */
 void render_system_init(plaza *p, ecs_system *s) {
-    s->signature = 0 | (1 << SPRITE); //Add the sprite bit to the signature
+    s->signature = 0 | (1 << SPRITE) | (1 << TRANSFORM); //Add the sprite bit to the signature
 }
 
 void render_system_update(plaza *p, ecs_system *s, float dt) {
@@ -21,8 +23,14 @@ void render_system_update(plaza *p, ecs_system *s, float dt) {
     for(size_t i = 0; i < s->archetypes->size; i++) { //Get all of the archetypes in the system
         for(size_t j = 0; j < get_value(s->archetypes, archetype *, i)->size; j++) { //Get all of the entities in a given archetype
             sprite *sprite = get_component_from_entity(p, get_value(s->archetypes, archetype *, i)->entities[j], SPRITE); //Get the sprite component from that entity
-            //Surely we should also get the transform here and add it to the sprite coords to accurately reflect movement?
-            render_push_quad(gRenderer, sprite->coords, sprite->colours, sprite->uv, sprite->texture); //Push the sprite to be rendeered
+            transform *t = get_component_from_entity(p, ((archetype **)s->archetypes->data)[i]->entities[j], TRANSFORM); //Get the transform
+
+            //TODO: Account for rotation as well
+            vector2 coords[4];
+            for(int i = 0; i < 4; i++)
+                coords[i] = (vector2){(t->position.x + sprite->coords[i].x) * PIXEL_SIZE, (t->position.y + sprite->coords[i].y) * PIXEL_SIZE};
+
+            render_push_quad(gRenderer, coords, sprite->colours, sprite->uv, sprite->texture); //Push the sprite to be rendeered
         }
     }
     render_end_frame(gRenderer); //Stop the texture renderer and send off remaining polys to GPU
@@ -32,6 +40,7 @@ void render_system_update(plaza *p, ecs_system *s, float dt) {
  * FUNCTIONS FOR PIXEL SYSTEM
  */
 void pixel_system_init(plaza *p, ecs_system *s) {
+    pixel_func_queue = queue_alloc(10, sizeof(pixel_op_callback *));
     s->signature = 0;
 }
 
@@ -71,14 +80,115 @@ void update_pixel(world_grid *og, world_grid *ng, size_t index, int dir) {
     }
 }
 
+void erase_pixels_callback(pixel_func_args *args) {
+    //Do pixel erasure after updating all of the grid pixel data
+    if (glfwGetWindowAttrib(gw, GLFW_FOCUSED)) { //Only erase when the window is in focus.
+        double cursor_x = handler->mouseX;
+        double cursor_y = handler->mouseY;
+        world_grid *og = args->gbuf->grids[args->gbuf->curr];
+
+        list *point_list = list_alloc(10, sizeof(ivector2)); //List to store coordinates of points which have been erased
+        list *entity_list = list_alloc(10, sizeof(int32_t)); //List to store all of the parent entities of these rigidbodies (to prevent double rigidbody processing)
+        erase_pixels(2, cursor_x * 1/(float)PIXEL_SIZE, cursor_y * 1/(float)PIXEL_SIZE, og, point_list); //Erase pixels at the current cursor position
+
+        if(point_list->size > 0)
+            printf("========= NEW ERASURE ========\n");
+        for(int i = 0; i < point_list->size; i++) { //For each erased point which has a rigidbody parent
+            ivector2 point = get_value(point_list, ivector2, i);
+            uint32_t grid_pos = (point.y * og->width) + point.x; //Get its grid index
+
+            //Checking if we have already processed a particular rigidbody by checking if we have stored the id of its parent entity
+            int index = -1;
+            for(int i = 0; i < entity_list->size; i++) {
+                if(get_value(entity_list, int32_t, i) == og->parents[grid_pos]){
+                    index = i;
+                    break;
+                }
+            }
+            //If not, mark it as processed
+            if(index == -1) {
+                push_value(entity_list, int32_t, og->parents[grid_pos]);
+            }
+
+            rigidbody *rb = get_component_from_entity(args->p, og->parents[grid_pos], RIGIDBODY); //Get a reference to the actual rigidbody struct
+            transform *t = get_component_from_entity(args->p, og->parents[grid_pos], TRANSFORM); //And to its corresponding transform
+
+            //Get the relative position of the pixel to the rigidbody that is stored in the rigidbody struct
+            vector2 d = {(point.x + 0.5) - t->position.x, (point.y + 0.5f) - t->position.y};
+            vector2 rotated_pos = rotate_about_point(&d, &(vector2){0,0}, -t->rotation, 1);
+
+            //Computign half-lengths of this rigidbody
+            float half_width = (rb->width - 1) * 0.5f;
+            float half_height = (rb->height - 1) * 0.5f;
+
+            //Get the pixel's position in the rigidbody
+            int ix = (int)floorf(rotated_pos.x + half_width + 0.5f);
+            int iy = (int)floorf(rotated_pos.y + half_height + 0.5f);
+
+            //If the unrotated pixel is in the rigidbody's bounding box and the mask says its not erased, colour it
+            if(ix >= 0 && ix < rb->width && iy >= 0 && iy < rb->height && rb->mask[iy * rb->width + ix]) {
+                //Clear mask. Must be done before removing pixel
+                rb->mask[iy * rb->width + ix] = 0;
+
+                for(int j = 0; j < rb->pixel_count; j++) {
+                    //Pixel coords relative to rigidbody center
+                    vector2 rel = rb->pixel_coords[j];
+
+                    //Rotate to world space
+                    vector2 world_pos = rotate_about_point(&rel, &(vector2){0,0}, t->rotation, 1);
+                    world_pos.x += t->position.x;
+                    world_pos.y += t->position.y;
+
+                    //Compare to the erased pixel using a small epsilon
+                    float dx = world_pos.x - ((float)point.x + 0.5f);
+                    float dy = world_pos.y - ((float)point.y + 0.5f);
+
+                    if(dx*dx + dy*dy < 0.25f) { //within half a pixel
+                        rb->pixel_coords[j] = rb->pixel_coords[rb->pixel_count - 1]; //remove pixel by swapping with last index
+                        rb->pixel_count--; //Reduce pixel count
+                        break;
+                    }
+                }
+            }
+            og->parents[grid_pos] = -1; //Need to actually set the pixel to have no parent otherwise bfs will be wierd
+        }
+        //Split all processed rigidbodies
+        for(int i = 0; i < entity_list->size; i++) {
+            printf("================ NEW SPLIT ==============\n");
+            split_rigidbody(get_value(entity_list, int32_t, i), args->p, og, world_id);
+        }
+    }
+}
+
+void add_sand_callback(pixel_func_args *args) {
+    world_grid *og = args->gbuf->grids[args->gbuf->curr];
+
+    int idx = args->cursor_pos.y * og->width + args->cursor_pos.x;
+
+    if(og->data[idx] == 0 && og->parents[idx] == 0) {
+        og->data[idx] = 2;
+    }
+}
+
 void pixel_system_update(plaza *p, ecs_system *s, float dt) {
+    //First deal with any external changes (erasures etc made to the pixel grid):
+    int ok;
+    pixel_op_callback *cb;
+    while(pixel_func_queue->size > 0) {
+        dequeue(pixel_func_queue, pixel_op_callback *, cb, ok);
+        if(!ok) break;
+        cb->func(cb->args);
+        free(cb->args);
+        free(cb);
+    }
+
     static int left = 0;
     world_grid *old_grid = gb.grids[gb.curr];
     world_grid *new_grid = gb.grids[(gb.curr+1)%2];
 
     //Adding a new particle every frame just for testing
-    old_grid->data[48] = 100;
-    memcpy(old_grid->pixels[48], (uint8_t[]){0xd6, 0xcd, 0x18, 0xff}, sizeof(pixel));
+    // old_grid->data[48] = 100;
+    // memcpy(old_grid->pixels[48], (uint8_t[]){0xd6, 0xcd, 0x18, 0xff}, sizeof(pixel));
 
     clear_grid(new_grid);
 
@@ -176,80 +286,6 @@ void rigidbody_system_update(plaza *p, ecs_system *s, float dt) {
         }
     }
 
-    //Do pixel erasure after updating all of the grid pixel data
-    if (glfwGetWindowAttrib(gw, GLFW_FOCUSED)) { //Only erase when the window is in focus.
-
-        list *point_list = list_alloc(10, sizeof(ivector2)); //List to store coordinates of points which have been erased
-        list *entity_list = list_alloc(10, sizeof(int32_t)); //List to store all of the parent entities of these rigidbodies (to prevent double rigidbody processing)
-        erase_pixels(2, cursor_x * 1/(float)PIXEL_SIZE, cursor_y * 1/(float)PIXEL_SIZE, next_grid, point_list); //Erase pixels at the current cursor position
-
-        if(point_list->size > 0)
-            printf("========= NEW ERASURE ========\n");
-        for(int i = 0; i < point_list->size; i++) { //For each erased point which has a rigidbody parent
-            ivector2 point = get_value(point_list, ivector2, i);
-            uint32_t grid_pos = (point.y * next_grid->width) + point.x; //Get its grid index
-
-            //Checking if we have already processed a particular rigidbody by checking if we have stored the id of its parent entity
-            int index = -1;
-            for(int i = 0; i < entity_list->size; i++) {
-                if(get_value(entity_list, int32_t, i) == next_grid->parents[grid_pos]){
-                    index = i;
-                    break;
-                }
-            }
-            //If not, mark it as processed
-            if(index == -1) {
-                push_value(entity_list, int32_t, next_grid->parents[grid_pos]);
-            }
-
-            rigidbody *rb = get_component_from_entity(p, next_grid->parents[grid_pos], RIGIDBODY); //Get a reference to the actual rigidbody struct
-            transform *t = get_component_from_entity(p, next_grid->parents[grid_pos], TRANSFORM); //And to its corresponding transform
-
-            //Get the relative position of the pixel to the rigidbody that is stored in the rigidbody struct
-            vector2 d = {(point.x + 0.5) - t->position.x, (point.y + 0.5f) - t->position.y};
-            vector2 rotated_pos = rotate_about_point(&d, &(vector2){0,0}, -t->rotation, 1);
-
-            //Computign half-lengths of this rigidbody
-            float half_width = (rb->width - 1) * 0.5f;
-            float half_height = (rb->height - 1) * 0.5f;
-
-            //Get the pixel's position in the rigidbody
-            int ix = (int)floorf(rotated_pos.x + half_width + 0.5f);
-            int iy = (int)floorf(rotated_pos.y + half_height + 0.5f);
-
-            //If the unrotated pixel is in the rigidbody's bounding box and the mask says its not erased, colour it
-            if(ix >= 0 && ix < rb->width && iy >= 0 && iy < rb->height && rb->mask[iy * rb->width + ix]) {
-                //Clear mask. Must be done before removing pixel
-                rb->mask[iy * rb->width + ix] = 0;
-
-                for(int j = 0; j < rb->pixel_count; j++) {
-                    //Pixel coords relative to rigidbody center
-                    vector2 rel = rb->pixel_coords[j];
-
-                    //Rotate to world space
-                    vector2 world_pos = rotate_about_point(&rel, &(vector2){0,0}, t->rotation, 1);
-                    world_pos.x += t->position.x;
-                    world_pos.y += t->position.y;
-
-                    //Compare to the erased pixel using a small epsilon
-                    float dx = world_pos.x - ((float)point.x + 0.5f);
-                    float dy = world_pos.y - ((float)point.y + 0.5f);
-
-                    if(dx*dx + dy*dy < 0.25f) { //within half a pixel
-                        rb->pixel_coords[j] = rb->pixel_coords[rb->pixel_count - 1]; //remove pixel by swapping with last index
-                        rb->pixel_count--; //Reduce pixel count
-                        break;
-                    }
-                }
-            }
-            next_grid->parents[grid_pos] = -1; //Need to actually set the pixel to have no parent otherwise bfs will be wierd
-        }
-        //Split all processed rigidbodies
-        for(int i = 0; i < entity_list->size; i++) {
-            printf("================ NEW SPLIT ==============\n");
-            split_rigidbody(get_value(entity_list, int32_t, i), p, next_grid, world_id);
-        }
-    }
     //Destroy the old grid and set the new grid as the old grid
     gb.curr = next;
 }
@@ -285,6 +321,20 @@ void ui_system_init(plaza *p, ecs_system *s) {
 
 void ui_system_update(plaza *p, ecs_system *s, float dt) {
     if(glfwGetWindowAttrib(gw, GLFW_FOCUSED)) {
+        for(size_t i = 0; i < s->archetypes->size; i++) { //For every archetype assigned to this system
+            for(size_t j = 0; j < get_value(s->archetypes, archetype *, i)->size; j++) { //For every entity in that archetype
+                transform *t = get_component_from_entity(p, ((archetype **)s->archetypes->data)[i]->entities[j], TRANSFORM); //Get the transform
+                button *b = get_component_from_entity(p, ((archetype **)s->archetypes->data)[i]->entities[j], BUTTON); //Get the transform
+                int pixel_x = handler->mouseX / PIXEL_SIZE;
+                int pixel_y = handler->mouseY / PIXEL_SIZE;
 
+                if(pixel_x >= t->position.x && pixel_x < t->position.x + b->bounds.x
+                    && pixel_y >= t->position.y && pixel_y < t->position.y + b->bounds.y
+                    && handler->key_status[MOUSE_BUTTON_LEFT] == KEY_JUST_PRESSED) {
+                    printf("Pressed a button\n");
+                    b->cb(b->cb_args);
+                }
+            }
+        }
     }
 }

@@ -657,6 +657,18 @@ void free_rigidbody(void *rb) {
     free(r->pixel_coords);
 }
 
+button *create_button(void (*cb)(void *args), void *cb_args, ivector2 bounds) {
+    button *ret = malloc(sizeof(button));
+    ret->cb = cb;
+    ret->cb_args = cb_args;
+    ret->bounds = bounds;
+
+    return ret;
+}
+void free_button(void *bt) {
+    return;
+}
+
 /**
  * Initialises a world_grid to be blank
  * @param width the width of the grid

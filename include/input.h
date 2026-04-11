@@ -84,6 +84,10 @@ void glfw_mouse_callback(GLFWwindow *window, int key, int action, int mods);
  */
 void glfw_key_callback(GLFWwindow *window, int key, int scancode, int action, int mods);
 /**
+ * Updates the key state of those not affected by glfw callbacks
+ */
+void update_key_state(input_handler *ih);
+/**
  * Callback function to be used by glfw when the cursor position changes
  */
 void glfw_cursor_pos_callback(GLFWwindow *window, double xpos, double ypos);

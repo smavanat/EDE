@@ -24,12 +24,14 @@ pixel_renderer *pRenderer;
 debug_renderer *dRenderer;
 b2WorldId world_id;
 GLFWwindow *gw = NULL;
-struct grid_buffer gb;
+grid_buffer gb;
 input_handler *handler;
+int selected = 0;
 
 //TODO: Need to make the list in the world that holds all the systems a priority queue so we can order the systems properly
 //      If a rigidbody drops to one pixel, just delete that rigidbody and treat the pixel as part of the pixel simulation
 //      Make a UI for selecting the type of pixel we want to add to the world
+//      Make a queue for adding pixel manipulation operations to every frame. These are then executed at the start of the pixel simulation update call
 //NOTE: ALL RIGIDBODIES NEED TO HAVE EVEN DIMENSIONS TO ENSURE WE DON'T GET WEIRD HALF-PIXEL OFFSETS
 
 //Thank you Bernardo: https://stackoverflow.com/questions/1157209/is-there-an-alternative-sleep-function-in-c-to-milliseconds
@@ -87,6 +89,11 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glUniformMatrix4fv(proj_loc, 1, GL_FALSE, (float *)dRenderer->projection);
 }
 
+void set_selected(void *val) {
+    selected = (int)(intptr_t)val;
+    printf("Selected is %i\n", selected);
+}
+
 /**
  * Handles user input for a specific window
  * @param window the window we want to handle input for
@@ -94,6 +101,26 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 void process_input(GLFWwindow* window) {
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, 1);
+    }
+
+    if(handler->key_status[MOUSE_BUTTON_LEFT] == KEY_JUST_PRESSED || handler->key_status[MOUSE_BUTTON_LEFT] == KEY_PRESSED) {
+        pixel_op_callback *val = malloc(sizeof(pixel_op_callback));
+        val->args = malloc(sizeof(pixel_func_args));
+        val->args->cursor_pos = (ivector2){handler->mouseX * 1/(float)PIXEL_SIZE, handler->mouseY* 1/(float)PIXEL_SIZE};
+        val->args->gbuf = &gb;
+        val->args->p = w->p;
+        if(selected == 1) {
+            val->func = erase_pixels_callback;
+            enqueue(pixel_func_queue, pixel_op_callback*, val);
+        }
+        else if(selected == 2) {
+            val->func = add_sand_callback;
+            enqueue(pixel_func_queue, pixel_op_callback*, val);
+        }
+        else {
+            free(val->args);
+            free(val);
+        }
     }
 }
 
@@ -163,6 +190,7 @@ int init(GLFWwindow **window) {
 
     w = world_alloc(world_id);
     add_system(w, &render_system_init, &render_system_update); //Creating the render system
+    add_system(w, &ui_system_init, ui_system_update);
     add_system(w, &physics_system_init, &physics_system_update); //Creating the physics system -> Needs to update before rigidbodies otherwise colliders appear to 'accelerate' ahead of rigidbodies
     add_system(w, &pixel_system_init, &pixel_system_update);
     add_system(w, &rigidbody_system_init, &rigidbody_system_update); //Creating the rigidbody system
@@ -184,11 +212,28 @@ int init(GLFWwindow **window) {
 int load(void) {
     //Creating the entity to store the sprite component
     entity e = create_entity(w->p);
+    transform *button_t = create_transform((vector2){60, 10}, 0, 0);
+    add_component_to_entity(w->p, e, TRANSFORM, button_t);
+
+    button *b = create_button(&set_selected, (void *)(intptr_t)1, (ivector2){4, 4});
+    add_component_to_entity(w->p, e, BUTTON, b);
     sprite *spr = create_sprite(render_texture_load("../data/assets/container.jpg"),
-                                (vector2[4]){{0.75f * SCREEN_WIDTH, 0.75f * SCREEN_HEIGHT}, {0.75f * SCREEN_WIDTH, 0.25f * SCREEN_HEIGHT}, {0.25f * SCREEN_WIDTH, 0.25f * SCREEN_HEIGHT}, {0.25f * SCREEN_WIDTH, 0.75f * SCREEN_HEIGHT}},
+                                (vector2[4]){{b->bounds.x, b->bounds.y}, {b->bounds.x, 0}, {0, 0}, {0, b->bounds.y}},
                                 (vector4[4]){{1.0f, 0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 0.0f, 0.0f}},
                                 (vector2[4]){{1.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 1.0f}});
     add_component_to_entity(w->p, e, SPRITE, spr);
+
+    entity b2 = create_entity(w->p);
+    transform *button_t2 = create_transform((vector2){60, 15}, 0, 0);
+    add_component_to_entity(w->p, b2, TRANSFORM, button_t2);
+
+    button *b_2 = create_button(&set_selected, (void *)(intptr_t)2, (ivector2){4, 4});
+    add_component_to_entity(w->p, b2, BUTTON, b_2);
+    sprite *spr2 = create_sprite(render_texture_load("../data/assets/container.jpg"),
+                                (vector2[4]){{b->bounds.x, b->bounds.y}, {b->bounds.x, 0}, {0, 0}, {0, b->bounds.y}},
+                                (vector4[4]){{1.0f, 0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 0.0f, 0.0f}},
+                                (vector2[4]){{1.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 1.0f}});
+    add_component_to_entity(w->p, b2, SPRITE, spr2);
 
     //Entity to hold the falling box
     entity r = create_entity(w->p);
@@ -258,11 +303,13 @@ int main(int argc, char** argv) {
                 b2World_Step(w->world_id, 1.0f/60.0f, 4); //Update the physics
 
                 //Need to draw a quad representing the erasure area
+                //TODO: VERY MESSY, PLEASE FIX
                 double cursor_x, cursor_y;
                 glfwGetCursorPos(gw, &cursor_x, &cursor_y);
                 vector2 erasing_dimensions[] = {(vector2){cursor_x - (1 * PIXEL_SIZE), cursor_y - (2 * PIXEL_SIZE)}, (vector2){cursor_x - (1 * PIXEL_SIZE), cursor_y + (2 * PIXEL_SIZE)}, (vector2){cursor_x + (3 * PIXEL_SIZE), cursor_y + (2 * PIXEL_SIZE)}, (vector2){cursor_x + (3 * PIXEL_SIZE), cursor_y - (2 * PIXEL_SIZE)}};
                 render_draw_quad(dRenderer, erasing_dimensions, (vector4){98 / 256.0, 17 / 256.0, 156 / 256.0, 1.0});
                 debug_render_flush(dRenderer);
+                update_key_state(handler);
 
                 //check and call events and swap the buffers
                 glfwSwapBuffers(gw);

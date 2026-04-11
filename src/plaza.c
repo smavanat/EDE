@@ -44,14 +44,13 @@ plaza *init_plaza(void) {
             //     componentSize = sizeof(pathfinding);
             //     free_func = &free_pathfinding;
             //     break;
-            // case PIXEL:
-            //     componentSize = sizeof(pixel);
-            //     free_func = &free_pixel;
-            //     break;
             case RIGIDBODY:
                 componentSize = sizeof(rigidbody);
                 free_func = &free_rigidbody;
                 break;
+            case BUTTON:
+                componentSize = sizeof(button);
+                free_func = &free_button;
         }
         p->componentArrays[i] = initialise_component_array(componentSize, free_func);
     }
