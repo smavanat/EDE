@@ -103,7 +103,8 @@ void process_input(GLFWwindow* window) {
         glfwSetWindowShouldClose(window, 1);
     }
 
-    if(handler->key_status[MOUSE_BUTTON_LEFT] == KEY_JUST_PRESSED || handler->key_status[MOUSE_BUTTON_LEFT] == KEY_PRESSED) {
+    if(handler->key_status[MOUSE_BUTTON_LEFT] == KEY_JUST_PRESSED 
+        || handler->key_status[MOUSE_BUTTON_LEFT] == KEY_PRESSED) {
         pixel_op_callback *val = malloc(sizeof(pixel_op_callback));
         val->args = malloc(sizeof(pixel_func_args));
         val->args->cursor_pos = (ivector2){handler->mouseX * 1/(float)PIXEL_SIZE, handler->mouseY* 1/(float)PIXEL_SIZE};

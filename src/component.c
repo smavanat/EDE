@@ -669,38 +669,3 @@ void free_button(void *bt) {
     return;
 }
 
-/**
- * Initialises a world_grid to be blank
- * @param width the width of the grid
- * @param height the height of the grid
- * @return a pointer to the created world_grid on the heap
- */
-world_grid *initialise_grid(uint32_t width, uint32_t height) {
-    world_grid *grid = malloc(sizeof(world_grid));
-    grid->height = height;
-    grid->width = width;
-    grid->pixels = calloc(width * height, sizeof(pixel)); //All pixels are initially 0
-    grid->parents = calloc(width * height, sizeof(uint32_t));
-    grid->data = calloc(width * height, sizeof(pixel_data));
-    return grid;
-}
-
-/**
- * Clears the pixels and parents buffers of a world_grid, setting the former to 0 and the latter to -1
- * @param grid the grid to clear
- */
-void clear_grid(world_grid *grid) {
-    memset(grid->pixels, 0, sizeof(uint8_t) * grid->width * grid->height * 4);
-    memset(grid->parents, 0, sizeof(uint32_t) * grid->width * grid->height);
-    memset(grid->data, 0, sizeof(pixel_data) * grid->width * grid->height);
-}
-
-/**
- * Frees a world_grid alongside its pixels and parents buffers
- * @param grid the grid to free
- */
-void free_grid(world_grid *grid) {
-    free(grid->parents);
-    free(grid->pixels);
-    free(grid);
-}

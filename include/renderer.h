@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "../include/component.h"
 #include "../include/maths.h"
+#include "../include/pixel_sim.h"
 #include "../externals/cglm/cglm.h"
 
 //Code adapted from this video: https://www.youtube.com/watch?v=NPnQF4yABwg
@@ -29,7 +30,6 @@
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
 
-#define PIXEL_SIZE 10
 #define PIXEL_SCREEN_WIDTH SCREEN_WIDTH / PIXEL_SIZE
 #define PIXEL_SCREEN_HEIGHT SCREEN_HEIGHT / PIXEL_SIZE
 

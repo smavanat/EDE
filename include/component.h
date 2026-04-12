@@ -1,7 +1,6 @@
 #ifndef __COMPONENT_H__
 #define __COMPONENT_H__
 #include "maths.h"
-#include "pixel_sim.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -148,9 +147,6 @@ void free_pathfinding(void *p);
 
 //The following components are for implementing the destruction system to be more like the way Noita actually does it, buy having the rigidbody be fully made up of pixels
 
-// //An individual pixel
-typedef uint8_t pixel[4];
-
 //A rigidbody
 typedef struct {
     uint16_t width;
@@ -175,40 +171,5 @@ typedef struct {
 
 button *create_button(void (*cb)(void *args), void *cb_args, ivector2 bounds);
 void free_button(void *bt);
-
-typedef struct {
-    uint16_t width;
-    uint16_t height;
-    pixel *pixels;
-    uint32_t *parents; //TODO: Check if we can change the type to store less data
-    pixel_data *data;
-
-} world_grid;
-
-/**
- * Initialises a world_grid to be blank
- * @param width the width of the grid
- * @param height the height of the grid
- * @return a pointer to the created world_grid on the heap
- */
-world_grid *initialise_grid(uint32_t width, uint32_t height);
-/**
- * Clears the pixels and parents buffers of a world_grid, setting the former to 0 and the latter to -1
- * @param grid the grid to clear
- */
-void clear_grid(world_grid *grid);
-/**
- * Frees a world_grid alongside its pixels and parents buffers
- * @param grid the grid to free
- */
-void free_grid(world_grid *grid);
-
-/**
- * Holds the two grids that we swap between and their current index
- */
-typedef struct {
-    uint8_t curr;
-    world_grid *grids[2];
-} grid_buffer ;
 
 #endif

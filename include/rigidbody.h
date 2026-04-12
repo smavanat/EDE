@@ -36,15 +36,6 @@ rigidbody *create_rigidbody(uint32_t id, uint16_t width, uint16_t height, uint8_
  */
 rigidbody *create_rigidbody_from_pixels(uint32_t id, uint16_t width, uint16_t height, uint8_t colour[4], vector2 centre, list *pixel_coords, world_grid *grid);
 /**
- * Erases pixels in a square area. Used for testing the pixel destruction system
- * @param radius the half-width of the square erasure area
- * @param x the x-coordinate of the centre of the erasing square
- * @param y the y-coordinate of the centre of the erasing square
- * @param grid the world grid that erasure is occuring on
- * @param rbs a pointer to a list to store the coordintes of erased pixels that are part of a rigidbody
- */
-void erase_pixels(int radius, int x, int y, world_grid *grid, list *rbs);
-/**
  * Splits a 'dirty' (has erased pixels) rigidbody into new rigidbodies if necessary, or adjusts its collider if not
  * @param id the entity to which the rigidbody belongs
  * @param p a pointer to the plaza managing entities

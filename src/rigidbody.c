@@ -140,43 +140,6 @@ rigidbody *fcreate_rigidbody_from_pixels(uint32_t id, uint16_t width, uint16_t h
 }
 
 /**
- * Erases pixels in a square area. Used for testing the pixel destruction system
- * @param radius the half-width of the square erasure area
- * @param x the x-coordinate of the centre of the erasing square
- * @param y the y-coordinate of the centre of the erasing square
- * @param grid the world grid that erasure is occuring on
- * @param rbs a pointer to a list to store the coordintes of erased pixels that are part of a rigidbody
- */
-void erase_pixels(int radius, int x, int y, world_grid *grid, list *rb_pts) {
-    if (radius > 0) { //If the square is not one pixel in side length
-        for (int h = 0; h < radius * 2; h++) {
-            for (int w = 0; w < radius * 2; w++) {
-                int dx = radius - w; // horizontal offset
-                int dy = radius - h; // vertical offset
-                if((x + dx < grid->width) && (x + dx > -1) && (y + dy < grid->height) && (y + dy > -1)) { //If the offset is in the grid boundary
-                    //Set the pixel at this grid position to be colourless as its erased
-                    grid->data[(y + dy) * grid->width + (x + dx)] = 0;
-                    //If the pixel has a rigidbody parent, add it to rb_pts
-                    if(grid->parents[(y + dy) * grid->width + (x + dx)] > 0) {
-                        ivector2 new_pos = (ivector2){x+dx, y+dy};
-                        push_value(rb_pts, ivector2, new_pos);
-                    }
-                }
-            }
-        }
-    }
-    else { //The erasure square is only one pixel in size
-        //Set the pixel at this grid position to be colourless
-        grid->data[(y  * grid->width) + x ] = 0;
-        //If the pixel has a rigidbody parent, add it to rb_pts
-        if(grid->parents[(y * grid->width) + x] > 0) {
-            ivector2 new_pos = (ivector2){x, y};
-            push_value(rb_pts, ivector2, new_pos);
-        }
-    }
-}
-
-/**
  * MARCHING SQUARES IMPLEMENTATION
  *
  *Marching squares: First we need to get the starting pixel. This is just done by iterating over the array until
