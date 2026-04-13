@@ -51,7 +51,13 @@ target_include_directories(ede
     PRIVATE
         "${CMAKE_SOURCE_DIR}/externals/Include"
 )
-if(WIN32)
+
+if(APPLE)
+    find_library(COCOA_LIBRARY Cocoa)
+    find_library(IOKIT_LIBRARY IOKit)
+    find_library(COREVIDEO_LIBRARY CoreVideo)
+    target_link_libraries(ede PRIVATE glfw box2d ${COCOA_LIBRARY} ${IOKIT_LIBRARY} ${COREVIDEO_LIBRARY} "-framework OpenGL")
+elseif(WIN32)
     target_link_libraries(ede PRIVATE glfw box2d opengl32 kernel32 user32 gdi32 shell32)
 else()
     target_link_libraries(ede PRIVATE glfw box2d GL X11 pthread Xi dl m)
