@@ -31,6 +31,7 @@ int scale = 1;
 
 //TODO: Need to make the list in the world that holds all the systems a priority queue so we can order the systems properly
 //      If a rigidbody drops to one pixel, just delete that rigidbody and treat the pixel as part of the pixel simulation
+//      Fix weird bug where pixels keep being dropped into the world even though I am not pressing anything
 //      Add z-index support to the texture renderer
 //NOTE: ALL RIGIDBODIES NEED TO HAVE EVEN DIMENSIONS TO ENSURE WE DON'T GET WEIRD HALF-PIXEL OFFSETS
 
@@ -110,7 +111,12 @@ void process_input(GLFWwindow* window) {
         val->args->cursor_pos = (ivector2){handler->mouseX * 1/(float)PIXEL_SIZE, handler->mouseY* 1/(float)PIXEL_SIZE};
         val->args->gbuf = &gb;
         if(selected == 1) {
-            val->args->extra_data = (void *)w->p;
+            add_pixel_func_args *extra_args = malloc(sizeof(add_pixel_func_args));
+            extra_args->type_variant = PIXEL_NONE;
+            extra_args->scale = scale;
+            extra_args->p = w->p;
+            val->args->extra_data = (void *)extra_args;
+            // val->args->extra_data = (void *)w->p;
             val->func = erase_pixels_callback;
             enqueue(pixel_func_queue, pixel_op_callback*, val);
         }
@@ -119,8 +125,6 @@ void process_input(GLFWwindow* window) {
             extra_args->type_variant = PIXEL_SAND;
             extra_args->scale = scale;
             val->args->extra_data = (void *)extra_args;
-            // val->args->extra_data = malloc(sizeof(add_pixel_func_args));
-            // val->args->extra_data.type = PIXEL_SAND;
             val->func = add_pixel_callback;
             enqueue(pixel_func_queue, pixel_op_callback*, val);
         }
@@ -320,7 +324,8 @@ int main(int argc, char** argv) {
                 double cursor_x, cursor_y;
                 glfwGetCursorPos(gw, &cursor_x, &cursor_y);
                 vector2 erasing_dimensions[] = {(vector2){cursor_x - (1 * PIXEL_SIZE), cursor_y - (2 * PIXEL_SIZE)}, (vector2){cursor_x - (1 * PIXEL_SIZE), cursor_y + (2 * PIXEL_SIZE)}, (vector2){cursor_x + (3 * PIXEL_SIZE), cursor_y + (2 * PIXEL_SIZE)}, (vector2){cursor_x + (3 * PIXEL_SIZE), cursor_y - (2 * PIXEL_SIZE)}};
-                render_draw_quad(dRenderer, erasing_dimensions, (vector4){98 / 256.0, 17 / 256.0, 156 / 256.0, 1.0});
+                // render_draw_quad(dRenderer, erasing_dimensions, (vector4){98 / 256.0, 17 / 256.0, 156 / 256.0, 1.0});
+                render_draw_circle(dRenderer, (vector2){(int)cursor_x, (int)cursor_y}, (float)scale * PIXEL_SIZE, (vector4){98 / 256.0, 17 / 256.0, 156 / 256.0, 1.0});
                 debug_render_flush(dRenderer);
                 update_key_state(handler);
 

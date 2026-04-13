@@ -95,6 +95,7 @@ typedef struct {
 typedef struct {
     pixel_type type_variant;
     uint32_t scale;
+    plaza *p;
 } add_pixel_func_args;
 
 extern queue *pixel_func_queue;

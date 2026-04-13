@@ -48,7 +48,6 @@ void update_pixel(world_grid *og, world_grid *ng, size_t index, int dir) {
     //So we don't overwrite existing cells
     if(ng->data[new_index].type_variant == 0) {
         ng->data[new_index].type_variant = PIXEL_SAND;
-        // memcpy(ng->pixels[new_index], (uint8_t[]){0xd6, 0xcd, 0x18, 0xff}, sizeof(pixel));
     }
 }
 
@@ -66,7 +65,8 @@ void erase_pixels(int radius, int x, int y, world_grid *grid, list *rb_pts) {
             for (int w = 0; w < radius * 2; w++) {
                 int dx = radius - w; // horizontal offset
                 int dy = radius - h; // vertical offset
-                if((x + dx < grid->width) && (x + dx > -1) && (y + dy < grid->height) && (y + dy > -1)) { //If the offset is in the grid boundary
+                //If the offset is in the grid and circle boundaries
+                if((dx * dx + dy * dy) < (radius * radius) && (x + dx < grid->width) && (x + dx > -1) && (y + dy < grid->height) && (y + dy > -1)) {
                     //Set the pixel at this grid position to be dataless as its erased
                     grid->data[(y + dy) * grid->width + (x + dx)].type_variant = 0;
                     //If the pixel has a rigidbody parent, add it to rb_pts
@@ -95,11 +95,13 @@ void erase_pixels_callback(pixel_func_args *args) {
     double cursor_x = handler->mouseX;
     double cursor_y = handler->mouseY;
     world_grid *og = args->gbuf->grids[args->gbuf->curr];
-    plaza *p = (plaza *)args->extra_data;
+    add_pixel_func_args *ea = args->extra_data;
+    plaza *p = (plaza *) ea->p;
+    // plaza *p = (plaza *)args->extra_data;
 
     list *point_list = list_alloc(10, sizeof(ivector2)); //List to store coordinates of points which have been erased
     list *entity_list = list_alloc(10, sizeof(int32_t)); //List to store all of the parent entities of these rigidbodies (to prevent double rigidbody processing)
-    erase_pixels(2, cursor_x * 1/(float)PIXEL_SIZE, cursor_y * 1/(float)PIXEL_SIZE, og, point_list); //Erase pixels at the current cursor position
+    erase_pixels(ea->scale, cursor_x * 1/(float)PIXEL_SIZE, cursor_y * 1/(float)PIXEL_SIZE, og, point_list); //Erase pixels at the current cursor position
 
     if(point_list->size > 0)
         printf("========= NEW ERASURE ========\n");
@@ -167,6 +169,10 @@ void erase_pixels_callback(pixel_func_args *args) {
         printf("================ NEW SPLIT ==============\n");
         split_rigidbody(get_value(entity_list, int32_t, i), p, og, world_id);
     }
+
+    free(ea);
+    free_list(point_list);
+    free_list(entity_list);
 }
 
 void add_pixel_callback(pixel_func_args *args) {
@@ -183,7 +189,7 @@ void add_pixel_callback(pixel_func_args *args) {
                 int dy = scale - h; // vertical offset
                 int idx = (y + dy) * og->width + (x + dx);
                 //If the offset is in the grid boundary and the cell at this offset is not occupied
-                if( (dx * dx + dy * dy) < (scale * scale) && (x + dx < og->width)
+                if((dx * dx + dy * dy) < (scale * scale) && (x + dx < og->width)
                     && (x + dx > -1)  && (y + dy < og->height) && (y + dy > -1)
                     && og->data[idx].type_variant == PIXEL_NONE && og->parents[idx] == 0) {
                     //Set the pixel at this grid position to be the variant specified
