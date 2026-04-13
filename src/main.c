@@ -27,11 +27,11 @@ GLFWwindow *gw = NULL;
 grid_buffer gb;
 input_handler *handler;
 int selected = 0;
+int scale = 1;
 
 //TODO: Need to make the list in the world that holds all the systems a priority queue so we can order the systems properly
 //      If a rigidbody drops to one pixel, just delete that rigidbody and treat the pixel as part of the pixel simulation
-//      Make a UI for selecting the type of pixel we want to add to the world
-//      Make a queue for adding pixel manipulation operations to every frame. These are then executed at the start of the pixel simulation update call
+//      Add z-index support to the texture renderer
 //NOTE: ALL RIGIDBODIES NEED TO HAVE EVEN DIMENSIONS TO ENSURE WE DON'T GET WEIRD HALF-PIXEL OFFSETS
 
 //Thank you Bernardo: https://stackoverflow.com/questions/1157209/is-there-an-alternative-sleep-function-in-c-to-milliseconds
@@ -109,19 +109,34 @@ void process_input(GLFWwindow* window) {
         val->args = malloc(sizeof(pixel_func_args));
         val->args->cursor_pos = (ivector2){handler->mouseX * 1/(float)PIXEL_SIZE, handler->mouseY* 1/(float)PIXEL_SIZE};
         val->args->gbuf = &gb;
-        val->args->p = w->p;
         if(selected == 1) {
+            val->args->extra_data = (void *)w->p;
             val->func = erase_pixels_callback;
             enqueue(pixel_func_queue, pixel_op_callback*, val);
         }
         else if(selected == 2) {
-            val->func = add_sand_callback;
+            add_pixel_func_args *extra_args = malloc(sizeof(add_pixel_func_args));
+            extra_args->type_variant = PIXEL_SAND;
+            extra_args->scale = scale;
+            val->args->extra_data = (void *)extra_args;
+            // val->args->extra_data = malloc(sizeof(add_pixel_func_args));
+            // val->args->extra_data.type = PIXEL_SAND;
+            val->func = add_pixel_callback;
             enqueue(pixel_func_queue, pixel_op_callback*, val);
         }
         else {
             free(val->args);
             free(val);
         }
+    }
+
+    if(handler->key_status[KEY_MINUS] == KEY_JUST_PRESSED && scale > 1) {
+        scale--;
+        printf("Scale is: %i\n", scale);
+    }
+    if(handler->key_status[KEY_PLUS] == KEY_JUST_PRESSED && scale < 11) {
+        scale++;
+        printf("Scale is: %i\n", scale);
     }
 }
 
@@ -241,7 +256,7 @@ int load(void) {
     transform *t = create_transform((vector2){10, 10}, 0, 0);
     add_component_to_entity(w->p, r, TRANSFORM, t);
 
-    rigidbody *rb = create_rigidbody(r, 10, 6, (uint8_t[]){0xff, 0x00, 0x00, 0xff}, (t->position), gb.grids[gb.curr]);
+    rigidbody *rb = create_rigidbody(r, 10, 6, PIXEL_STONE, (t->position), gb.grids[gb.curr]);
     add_component_to_entity(w->p, r, RIGIDBODY, rb);
 
     collider *c = malloc(sizeof(collider));
@@ -254,7 +269,7 @@ int load(void) {
     transform *tb = create_transform((vector2){40, 57}, 0, 0);
     add_component_to_entity(w->p, base, TRANSFORM, tb);
 
-    rigidbody *rbb = create_rigidbody(base, 80, 6, (uint8_t[]){0x00, 0x00, 0x00, 0xff}, (tb->position), gb.grids[gb.curr]);
+    rigidbody *rbb = create_rigidbody(base, 80, 6, PIXEL_WOOD, (tb->position), gb.grids[gb.curr]);
     add_component_to_entity(w->p, base, RIGIDBODY, rbb);
 
     collider *cb = malloc(sizeof(collider));
@@ -262,9 +277,6 @@ int load(void) {
     cb->collider_id = create_box_collider(tb->position, rbb->width, rbb->height, tb->rotation, w->world_id, b2_staticBody);
     add_component_to_entity(w->p, base, COLLIDER, cb);
 
-    // gb.grids[gb.curr]->parents[48] = -100;
-    // memcpy(gb.grids[gb.curr]->pixels[48], (uint8_t[]){0x00, 0xff, 0x00, 0xff}, sizeof(pixel));
-    //
     sys_query(w);
     return 1;
 }

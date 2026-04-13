@@ -17,18 +17,18 @@ ivector2 pixel_to_world_pos(uint32_t pos, uint32_t width);
  * @param id the id of its parent entity
  * @param width the width of the rigidbody
  * @param height the height of the rigidbody
- * @param colour the colour of its pixels (currently assuming all pixels in a rigidbody have uniform colour, can change this later)
+ * @param type_variant the variant and type of the pixels included in the rigidbody (currently assume the variant of all the pixels in the rigidbody is uniform, can change later)
  * @param centre its centre in worldspace
  * @param grid a pointer to the world grid where this rigidbody is located
  * @return a pointer to the created rigidbody
  */
-rigidbody *create_rigidbody(uint32_t id, uint16_t width, uint16_t height, uint8_t colour[4], vector2 centre, world_grid *grid);
+rigidbody *create_rigidbody(uint32_t id, uint16_t width, uint16_t height, uint16_t type_variant, vector2 centre, world_grid *grid);
 /**
  * Creates a rigidbody from a set of pixel data rather than just width and height, mostly used for split or non-rectangular rigidbodies
  * @param id the id of its parent entity
  * @param width the width of the rigidbody
  * @param height the height of the rigidbody
- * @param colour the colour of its pixels (currently assuming all pixels in a rigidbody have uniform colour, can change this later)
+ * @param type_variant the variant and type of the pixels included in the rigidbody (currently assume the variant of all the pixels in the rigidbody is uniform, can change later)
  * @param centre its centre in worldspace
  * @param pixel_coords a list containing the grid coordinates of the pixels that make up the rigidbody
  * @param grid a pointer to the world grid where this rigidbody is located

@@ -8,57 +8,13 @@
 #include "../include/input.h"
 #include "../include/rigidbody.h"
 
-uint32_t pixel_type_data[] = {
-    0b10000000000000000000000000000000, //SAND
-    0b01000000000000000000000000000000, //WOOD
-    0b00100000000000000000000000000000  //STONE
+pixel variant_colours[NUM_PIXEL_TYPES] = {
+    {0x00, 0x00, 0x00, 0x00}, //NONE
+    {0xd6, 0xcd, 0x18, 0xff}, //SAND
+    {0x34, 0x34, 0xeb, 0xff}, //WATER
+    {0x6e, 0x31, 0x0d, 0xff}, //WOOD
+    {0x69, 0x67, 0x65, 0xff}, //STONE
 };
-
-uint16_t get_pixel_type(pixel_data pd) {
-    //         12345678901234567890123456789012
-    return ((0b11111111111100000000000000000000 & pd) >> 20);
-}
-uint8_t get_pixel_variant(pixel_data pd) {
-    //         12345678901234567890123456789012
-    return ((0b00000000000011110000000000000000 & pd) >> 16);
-}
-uint8_t get_pixel_velocityX(pixel_data pd) {
-    //         12345678901234567890123456789012
-    return ((0b00000000000000001111100000000000 & pd) >> 11);
-}
-uint8_t get_pixel_velocityY(pixel_data pd) {
-    //         12345678901234567890123456789012
-    return ((0b00000000000000000000011111000000 & pd) >> 6);
-}
-uint8_t get_pixel_health(pixel_data pd) {
-    //         12345678901234567890123456789012
-    return ((0b00000000000000000000000000111111 & pd));
-}
-
-void overwrite_bits(uint32_t *val, uint32_t new_bits, int start_bit, int n_bits) {
-    if(n_bits <= 0 || n_bits > 32 || start_bit < 0 || start_bit > 31) return;
-
-    if(n_bits + start_bit > 32)n_bits = 32 - start_bit;
-
-    uint32_t mask = ((1U << n_bits)-1) << start_bit;
-    *val = (*val & ~mask) | ((new_bits & ((1U << n_bits) - 1)) << start_bit);
-}
-
-void set_pixel_type(pixel_data *pd, uint16_t new_type) {
-    overwrite_bits(pd, new_type, 0, 12);
-}
-void set_pixel_variant(pixel_data *pd, uint8_t new_var) {
-    overwrite_bits(pd, new_var, 12, 4);
-}
-void set_pixel_velocityX(pixel_data *pd, uint8_t new_vx) {
-    overwrite_bits(pd, new_vx, 16, 5);
-}
-void set_pixel_velocityY(pixel_data *pd, uint8_t new_vy) {
-    overwrite_bits(pd, new_vy, 21, 5);
-}
-void set_pixel_health(pixel_data *pd, uint8_t new_health) {
-    overwrite_bits(pd, new_health, 26, 6);
-}
 
 void update_pixel(world_grid *og, world_grid *ng, size_t index, int dir) {
     size_t new_index = index;
@@ -67,22 +23,22 @@ void update_pixel(world_grid *og, world_grid *ng, size_t index, int dir) {
     size_t right = index + og->width+1;
 
     if((index / og->width) < og->height - 1) {
-        if(og->data[bottom] == 0 && ng->data[bottom] == 0) {
+        if(og->data[bottom].type_variant == 0 && ng->data[bottom].type_variant == 0) {
             new_index = bottom;
         }
         else {
             if(dir) {
-                if(index % og->width != og->width-1 && og->data[right] == 0 && ng->data[right] == 0) {
+                if(index % og->width != og->width-1 && og->data[right].type_variant == 0 && ng->data[right].type_variant == 0) {
                     new_index = right;
                 }
-                else if(index % og->width != 0 && og->data[left] == 0 && ng->data[left] == 0) {
+                else if(index % og->width != 0 && og->data[left].type_variant == 0 && ng->data[left].type_variant == 0) {
                     new_index = left;
                 }
             }
             else {
-                if(index % og->width != 0 && og->data[left] == 0 && ng->data[left] == 0) { new_index = left;
+                if(index % og->width != 0 && og->data[left].type_variant == 0 && ng->data[left].type_variant == 0) { new_index = left;
                 }
-                else if(index % og->width != og->width-1 && og->data[right] == 0 && ng->data[right] == 0) {
+                else if(index % og->width != og->width-1 && og->data[right].type_variant == 0 && ng->data[right].type_variant == 0) {
                     new_index = right;
                 }
             }
@@ -90,9 +46,9 @@ void update_pixel(world_grid *og, world_grid *ng, size_t index, int dir) {
     }
 
     //So we don't overwrite existing cells
-    if(ng->data[new_index] == 0) {
-        ng->data[new_index] = 1;
-        memcpy(ng->pixels[new_index], (uint8_t[]){0xd6, 0xcd, 0x18, 0xff}, sizeof(pixel));
+    if(ng->data[new_index].type_variant == 0) {
+        ng->data[new_index].type_variant = PIXEL_SAND;
+        // memcpy(ng->pixels[new_index], (uint8_t[]){0xd6, 0xcd, 0x18, 0xff}, sizeof(pixel));
     }
 }
 
@@ -112,7 +68,7 @@ void erase_pixels(int radius, int x, int y, world_grid *grid, list *rb_pts) {
                 int dy = radius - h; // vertical offset
                 if((x + dx < grid->width) && (x + dx > -1) && (y + dy < grid->height) && (y + dy > -1)) { //If the offset is in the grid boundary
                     //Set the pixel at this grid position to be dataless as its erased
-                    grid->data[(y + dy) * grid->width + (x + dx)] = 0;
+                    grid->data[(y + dy) * grid->width + (x + dx)].type_variant = 0;
                     //If the pixel has a rigidbody parent, add it to rb_pts
                     if(grid->parents[(y + dy) * grid->width + (x + dx)] > 0) {
                         ivector2 new_pos = (ivector2){x+dx, y+dy};
@@ -124,7 +80,7 @@ void erase_pixels(int radius, int x, int y, world_grid *grid, list *rb_pts) {
     }
     else { //The erasure square is only one pixel in size
         //Set the pixel at this grid position to be dataless
-        grid->data[(y  * grid->width) + x ] = 0;
+        grid->data[(y  * grid->width) + x ].type_variant = 0;
         //If the pixel has a rigidbody parent, add it to rb_pts
         if(grid->parents[(y * grid->width) + x] > 0) {
             ivector2 new_pos = (ivector2){x, y};
@@ -139,6 +95,7 @@ void erase_pixels_callback(pixel_func_args *args) {
     double cursor_x = handler->mouseX;
     double cursor_y = handler->mouseY;
     world_grid *og = args->gbuf->grids[args->gbuf->curr];
+    plaza *p = (plaza *)args->extra_data;
 
     list *point_list = list_alloc(10, sizeof(ivector2)); //List to store coordinates of points which have been erased
     list *entity_list = list_alloc(10, sizeof(int32_t)); //List to store all of the parent entities of these rigidbodies (to prevent double rigidbody processing)
@@ -163,8 +120,8 @@ void erase_pixels_callback(pixel_func_args *args) {
             push_value(entity_list, int32_t, og->parents[grid_pos]);
         }
 
-        rigidbody *rb = get_component_from_entity(args->p, og->parents[grid_pos], RIGIDBODY); //Get a reference to the actual rigidbody struct
-        transform *t = get_component_from_entity(args->p, og->parents[grid_pos], TRANSFORM); //And to its corresponding transform
+        rigidbody *rb = get_component_from_entity(p, og->parents[grid_pos], RIGIDBODY); //Get a reference to the actual rigidbody struct
+        transform *t = get_component_from_entity(p, og->parents[grid_pos], TRANSFORM); //And to its corresponding transform
 
         //Get the relative position of the pixel to the rigidbody that is stored in the rigidbody struct
         vector2 d = {(point.x + 0.5) - t->position.x, (point.y + 0.5f) - t->position.y};
@@ -208,18 +165,41 @@ void erase_pixels_callback(pixel_func_args *args) {
     //Split all processed rigidbodies
     for(int i = 0; i < entity_list->size; i++) {
         printf("================ NEW SPLIT ==============\n");
-        split_rigidbody(get_value(entity_list, int32_t, i), args->p, og, world_id);
+        split_rigidbody(get_value(entity_list, int32_t, i), p, og, world_id);
     }
 }
 
-void add_sand_callback(pixel_func_args *args) {
+void add_pixel_callback(pixel_func_args *args) {
     world_grid *og = args->gbuf->grids[args->gbuf->curr];
+    add_pixel_func_args *ea = (add_pixel_func_args *)args->extra_data;
+    int scale = ea->scale;
+    int x = args->cursor_pos.x;
+    int y = args->cursor_pos.y;
 
-    int idx = args->cursor_pos.y * og->width + args->cursor_pos.x;
-
-    if(og->data[idx] == 0 && og->parents[idx] == 0) {
-        og->data[idx] = 2;
+    if(scale > 1) {
+        for(int h = 0; h < scale; h++) {
+            for(int w = 0; w < scale; w++) {
+                int dx = scale - w; // horizontal offset
+                int dy = scale - h; // vertical offset
+                int idx = (y + dy) * og->width + (x + dx);
+                //If the offset is in the grid boundary and the cell at this offset is not occupied
+                if( (dx * dx + dy * dy) < (scale * scale) && (x + dx < og->width)
+                    && (x + dx > -1)  && (y + dy < og->height) && (y + dy > -1)
+                    && og->data[idx].type_variant == PIXEL_NONE && og->parents[idx] == 0) {
+                    //Set the pixel at this grid position to be the variant specified
+                    og->data[(y + dy) * og->width + (x + dx)].type_variant = ea->type_variant;
+                }
+            }
+        }
     }
+    else {
+        int idx = args->cursor_pos.y * og->width + args->cursor_pos.x;
+
+        if(og->data[idx].type_variant == PIXEL_NONE && og->parents[idx] == 0) {
+            og->data[idx].type_variant = ea->type_variant;
+        }
+    }
+    free(ea);
 }
 
 

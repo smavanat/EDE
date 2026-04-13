@@ -26,18 +26,19 @@ ivector2 pixel_to_world_pos(uint32_t pos, uint32_t width) {
  * @param id the id of its parent entity
  * @param width the width of the rigidbody
  * @param height the height of the rigidbody
- * @param colour the colour of its pixels (currently assuming all pixels in a rigidbody have uniform colour, can change this later)
+ * @param type_variant the variant and type of the pixels included in the rigidbody (currently assume the variant of all the pixels in the rigidbody is uniform, can change later)
  * @param centre its centre in worldspace
  * @param grid a pointer to the world grid where this rigidbody is located
  * @return a pointer to the created rigidbody
  */
-rigidbody *create_rigidbody(uint32_t id, uint16_t width, uint16_t height, uint8_t colour[4], vector2 centre, world_grid *grid) {
+rigidbody *create_rigidbody(uint32_t id, uint16_t width, uint16_t height, uint16_t type_variant, vector2 centre, world_grid *grid) {
     //Creating the rigidbody and setting some variables
     rigidbody *rb = malloc(sizeof(rigidbody));
     rb->height = height;
     rb->width = width;
     rb->pixel_count = width * height;
-    memcpy(rb->colour, colour, sizeof(rb->colour));
+    // memcpy(rb->colour, colour, sizeof(rb->colour));
+    rb->type = type_variant;
     rb->pixel_coords = malloc(sizeof(ivector2) * rb->pixel_count);
     rb->mask = calloc(width * height, sizeof(uint8_t)); //Initialising the pixel mask to be zeroed out
 
@@ -52,7 +53,7 @@ rigidbody *create_rigidbody(uint32_t id, uint16_t width, uint16_t height, uint8_
     //Iterating over the area of the rigidbody
     for(int y = 0; y < height; y++) {
         for(int x = 0; x < width; x++) {
-            memcpy(grid->pixels[((top_left_y + y)*grid->width) + top_left_x + x], colour, sizeof(pixel)); //Setting the grid pixels at these positions to be the colour assigned to the rigidbody
+            // memcpy(grid->pixels[((top_left_y + y)*grid->width) + top_left_x + x], colour, sizeof(pixel)); //Setting the grid pixels at these positions to be the colour assigned to the rigidbody
             grid->parents[((top_left_y + y)*grid->width) + top_left_x + x] = id; //Setting the pixel parent id to be this rigidbody's entity parent id
             rb->pixel_coords[(y*width) + x ] = (vector2){x - half_width, y - half_height}; //Setting the relative pixel coords inside the rigidbody
             rb->mask[(y*width) + x] = 1;
@@ -66,19 +67,20 @@ rigidbody *create_rigidbody(uint32_t id, uint16_t width, uint16_t height, uint8_
  * @param id the id of its parent entity
  * @param width the width of the rigidbody
  * @param height the height of the rigidbody
- * @param colour the colour of its pixels (currently assuming all pixels in a rigidbody have uniform colour, can change this later)
+ * @param type_variant the variant and type of the pixels included in the rigidbody (currently assume the variant of all the pixels in the rigidbody is uniform, can change later)
  * @param centre its centre in worldspace
  * @param pixel_coords a list containing the grid coordinates of the pixels that make up the rigidbody
  * @param grid a pointer to the world grid where this rigidbody is located
  * @return a pointer to the created rigidbody
  */
-rigidbody *icreate_rigidbody_from_pixels(uint32_t id, uint16_t width, uint16_t height, uint8_t colour[4], vector2 centre, list *pixel_coords, world_grid *grid) {
+rigidbody *icreate_rigidbody_from_pixels(uint32_t id, uint16_t width, uint16_t height, uint16_t type_variant, vector2 centre, list *pixel_coords, world_grid *grid) {
     //Creating the rigidbody and setting some variables
     rigidbody *rb = malloc(sizeof(rigidbody));
     rb->height = height;
     rb->width = width;
     rb->pixel_count = pixel_coords->size;
-    memcpy(rb->colour, colour, sizeof(rb->colour));
+    // memcpy(rb->colour, colour, sizeof(rb->colour));
+    rb->type = type_variant;
     rb->pixel_coords = malloc(sizeof(vector2) * rb->pixel_count);
     rb->mask = calloc(height * width, sizeof(uint8_t)); //Initialising the pixel mask to be zeroed out
 
@@ -104,13 +106,14 @@ rigidbody *icreate_rigidbody_from_pixels(uint32_t id, uint16_t width, uint16_t h
     return rb;
 }
 
-rigidbody *fcreate_rigidbody_from_pixels(uint32_t id, uint16_t width, uint16_t height, uint8_t colour[4], vector2 centre, list *pixel_coords, world_grid *grid) {
+rigidbody *fcreate_rigidbody_from_pixels(uint32_t id, uint16_t width, uint16_t height, uint16_t type_variant, vector2 centre, list *pixel_coords, world_grid *grid) {
     //Creating the rigidbody and setting some variables
     rigidbody *rb = malloc(sizeof(rigidbody));
     rb->height = height;
     rb->width = width;
     rb->pixel_count = pixel_coords->size;
-    memcpy(rb->colour, colour, sizeof(rb->colour));
+    // memcpy(rb->colour, colour, sizeof(rb->colour));
+    rb->type = type_variant;
     rb->pixel_coords = malloc(sizeof(vector2) * rb->pixel_count);
     rb->mask = calloc(height * width, sizeof(uint8_t)); //Initialising the pixel mask to be zeroed out
 
@@ -670,7 +673,7 @@ void construct_new_rigidbody(list *pixel_coords, world_grid *grid, rigidbody *ol
     add_component_to_entity(p, e, TRANSFORM, t);
 
     //Creating the new rigidbody -> Need to copy over the pixel coords and calculate their relative position to the new centre
-    rigidbody *rb = fcreate_rigidbody_from_pixels(e, width, height, old_rb->colour, t->position, world_coords, grid);
+    rigidbody *rb = fcreate_rigidbody_from_pixels(e, width, height, old_rb->type, t->position, world_coords, grid);
     add_component_to_entity(p, e, RIGIDBODY, rb);
 
     //Marching squares on the outline of the pixels

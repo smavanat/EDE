@@ -63,3 +63,39 @@ My current plan is to add a primitive UI that will allow to to switch between di
 Note the callback function pointer so we can add functionality to it when clicked, and an ivector2 to show the clicking bounds. I've also made the skeleton of a UI system. Its entities must have a button (obviously) a transform (for world position) and sprite (since idk how the UI is going to interact with the pixel stuff, I'd much rather use a sprite than draw pixels since its easier and separate so I don't have to deal with that headache for now, its a problem for future me if we keep it separate or not).
 
 That is literally all that exists for it, and it will probably change drastically very soon, so I will not go into more detail for now
+
+11/10/26:
+Added a very basic input manager API. This is so I don't have to keep including GLFW everywhere so that if I every decide to switch away from it there's only one point of failure instead of having to search for random references across my program. Currently only supports A-Z keys and the three mouse buttons (because I'm lazy). Since GLFW only keeps PRESS and RELEASE state for each of its keys, my internal representation is a bit more detailed:
+    KEY_JUST_PRESSED: state switched to PRESS this frame
+    KEY_PRESSED: state was PRESS the previous frame and this frame
+    KEY_JUST_RELEASED: state switched to RELEASE this frame
+    KEY_RELEASED: state was RELEASE the previous frame and this frame
+All keys are initialised to be KEY_RELEASED and their state is updated through callbacks to GLFW.
+The input handler also holds the current cursor position, also updated through a callback
+
+Actually added working buttons to the game. They use smaller versions of the cargo texture that used to be the background (laziness again). I can't seem to figure out how to change their colour (for future). The button component struct was updated so it also contains the arguments passed into the function as a void *.
+Updated rendering so that all textures are now rendered scaled to the pixel size. Idk about this one, may change in the future.
+
+Implemented a sort-of event system for updating the pixel grid. The way it works is whenever something fires to update the pixel grid (adding/removing pixels) in the current frame, a struct made up of a callback function that executes that update and its arguments is added to a queue. The callback function has the following signature:
+    typedef void (*pixel_func)(pixel_func_args* args);
+And the arguments is a struct that looks like this:
+    typedef struct {
+        ivector2 cursor_pos;
+        grid_buffer *gbuf;
+        plaza *p;
+    } pixel_func_args;
+So the added struct looks like this:
+    typedef struct {
+        pixel_func func;
+        pixel_func_args *args;
+    } pixel_op_callback;
+Then at the start of the pixel_system_update function, the queue is popped and all of the callback functions' operations are carried out on the current pixel grid, so that it is in its newest state when updates occur in the pixel system. There are currently only two defined callback functions:
+    void erase_pixels_callback(pixel_func_args *args);
+    void add_sand_callback(pixel_func_args *args);
+Pretty self explanatory stuff. The second could be extended to just 'add_pixel_callback' since I don't think functionality will change between adding different pixels. We will just need to modify pixel_func_args to also include the pixel_data as an argument.
+
+I was able to like these to the buttons, so now we can drop sand and erase pixels at will. Yay!!!!!!
+
+12/10/26:
+Fell down a small rabbit hole of looking at if compute shaders could be used to run the falling sand sim really fast. After consulting the oracle, probably not, since it would require way too much CPU-GPU communication and be really slow. Better to just multithread everything on the CPU and not bother with the GPU.
+Also rearranged some code, moving a lot of the disparate pixel-related functionality into the pixel_sim.h/.c files.

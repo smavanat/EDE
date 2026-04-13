@@ -42,6 +42,7 @@ void render_system_update(plaza *p, ecs_system *s, float dt) {
 void pixel_system_init(plaza *p, ecs_system *s) {
     pixel_func_queue = queue_alloc(10, sizeof(pixel_op_callback *));
     s->signature = 0;
+    printf("New pixel data size: %lu\n", sizeof(pixel_data));
 }
 
 void pixel_system_update(plaza *p, ecs_system *s, float dt) {
@@ -70,13 +71,13 @@ void pixel_system_update(plaza *p, ecs_system *s, float dt) {
     for(size_t i = old_grid->height; i > 0; i--) {
         if(dir) {
             for(size_t j = 0; j < old_grid->width; j++) {
-                if(old_grid->data[((i-1) * old_grid->width) + j] > 0 && old_grid->parents[((i-1) * old_grid->width) + j] == 0)
+                if(old_grid->data[((i-1) * old_grid->width) + j].type_variant > 0 && old_grid->parents[((i-1) * old_grid->width) + j] == 0)
                     update_pixel(old_grid, new_grid, ((i-1) * old_grid->width) + j, dir);
             }
         }
         else {
             for(size_t j = old_grid->width; j > 0; j--) {
-                if(old_grid->data[((i-1) * old_grid->width) + j-1] > 0 && old_grid->parents[((i-1) * old_grid->width) + j-1] == 0)
+                if(old_grid->data[((i-1) * old_grid->width) + j-1].type_variant > 0 && old_grid->parents[((i-1) * old_grid->width) + j-1] == 0)
                     update_pixel(old_grid, new_grid, ((i-1) * old_grid->width) + j-1, dir);
             }
         }
@@ -150,10 +151,10 @@ void rigidbody_system_update(plaza *p, ecs_system *s, float dt) {
 
                     //If the unrotated pixel is in the rigidbody's bounding box and the mask says its not erased, colour it
                     if(ix >= 0 && ix < rigidbody->width && iy >= 0 && iy < rigidbody->height && rigidbody->mask[iy * rigidbody->width + ix]) {
-                        memcpy(next_grid->pixels[world_y * next_grid->width + world_x], rigidbody->colour, sizeof(pixel));
+                        // memcpy(next_grid->pixels[world_y * next_grid->width + world_x], rigidbody->colour, sizeof(pixel));
 
                         next_grid->parents[world_y * next_grid->width + world_x] = get_value(s->archetypes, archetype *, i)->entities[j];
-                        next_grid->data[world_y * next_grid->width + world_x] = 2;
+                        next_grid->data[world_y * next_grid->width + world_x].type_variant = rigidbody->type;
                     }
                 }
             }

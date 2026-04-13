@@ -38,6 +38,8 @@ typedef enum {
     KEY_X,
     KEY_Y,
     KEY_Z,
+    KEY_MINUS,
+    KEY_PLUS,
     MOUSE_BUTTON_LEFT,
     MOUSE_BUTTON_RIGHT,
     MOUSE_BUTTON_MIDDLE,

@@ -6,24 +6,40 @@
 #include "plaza.h"
 #include "queue.h"
 
+//NOTE: Have a look at this page: https://meatbatgames.com/blog/falling-sand-gpu/ for GPU shader ideas if you ever come back to it
+//      This is also a good repo: https://github.com/tranma/falling-sand-game?tab=readme-ov-file, https://github.com/GelamiSalami/GPU-Falling-Sand-CA/tree/main
+
+//TODO: Add more pixel types: Liquids, solids only for now
+//      Implement lookup table for default values
+//      Figure out how to handle particle lifetimes
+//      Figure out particle physics
+//      Figure out gases
+//      Figure out how to handle things like temperature
+//      Figure out conversions e.g. Lava + water = stone+steam
+//      Chunk and Multithread, try margolus neighbourhoods maybe for some nice sub-chunk speeds?
 #define PIXEL_SIZE 10
-//Layout of the data in the 4 bytes of pixel_data
-//+------------+---------+-----------+-----------+--------+
-//|    Type    | Variant | VelocityX | VelocityY | Health |
-//|000000000000|  0000   |   00000   |   00000   | 000000 |
-//+------------+---------+-----------+-----------+--------+
-typedef uint32_t pixel_data;
+
+typedef struct {
+    float ra;
+    float rb;
+    uint16_t type_variant;
+    uint16_t health;
+} pixel_data;
 
 // //An individual pixel
 typedef uint8_t pixel[4];
 
 typedef enum {
-    SAND,
-    WATER,
-    WOOD,
-    STONE,
+            //1234567890123456
+    PIXEL_NONE  = 0b0000000000000000,
+    PIXEL_SAND  = 0b0000000000000001,
+    PIXEL_WATER = 0b0000000000000010,
+    PIXEL_WOOD  = 0b0000000000000011,
+    PIXEL_STONE = 0b0000000000000100,
     NUM_PIXEL_TYPES
-} pixel_types;
+} pixel_type;
+
+extern pixel variant_colours[NUM_PIXEL_TYPES];
 
 extern uint32_t pixel_type_data[];
 
@@ -32,8 +48,8 @@ typedef struct {
     uint16_t height;
     pixel *pixels;
     uint32_t *parents; //TODO: Check if we can change the type to store less data
+    // pixel_data *data;
     pixel_data *data;
-
 } world_grid;
 
 /**
@@ -65,7 +81,8 @@ typedef struct {
 typedef struct {
     ivector2 cursor_pos;
     grid_buffer *gbuf;
-    plaza *p;
+    // plaza *p;
+    void *extra_data;
 } pixel_func_args;
 
 typedef void (*pixel_func)(pixel_func_args* args);
@@ -75,23 +92,16 @@ typedef struct {
     pixel_func_args *args;
 } pixel_op_callback;
 
+typedef struct {
+    pixel_type type_variant;
+    uint32_t scale;
+} add_pixel_func_args;
+
 extern queue *pixel_func_queue;
 void erase_pixels_callback(pixel_func_args *args);
-void add_sand_callback(pixel_func_args *args);
+void add_pixel_callback(pixel_func_args *args);
 
 extern b2WorldId world_id;
-
-uint16_t get_pixel_type(pixel_data pd);
-uint8_t get_pixel_variant(pixel_data pd);
-uint8_t get_pixel_velocityX(pixel_data pd);
-uint8_t get_pixel_velocityY(pixel_data pd);
-uint8_t get_pixel_health(pixel_data pd);
-
-void set_pixel_type(pixel_data *pd, uint16_t new_type);
-void set_pixel_variant(pixel_data *pd, uint8_t new_var);
-void set_pixel_velocityX(pixel_data *pd, uint8_t new_vx);
-void set_pixel_velocityY(pixel_data *pd, uint8_t new_vy);
-void set_pixel_health(pixel_data *pd, uint8_t new_health);
 
 void update_pixel(world_grid *og, world_grid *ng, size_t index, int dir);
 

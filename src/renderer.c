@@ -359,9 +359,16 @@ void render_end_pixel_frame(pixel_renderer *r) {
  * @oaram g the pixel grid whose pixels to use
  */
 void draw_grid(pixel_renderer *r, world_grid *g) {
-    uint16_t width = g->width < PIXEL_SCREEN_WIDTH ? g->width : PIXEL_SCREEN_WIDTH;
-    uint16_t height = g->height < PIXEL_SCREEN_HEIGHT? g->height: PIXEL_SCREEN_HEIGHT;
-    memcpy(r->pixels, g->pixels, g->width * g->height * 4);
+    // uint16_t width = g->width < PIXEL_SCREEN_WIDTH ? g->width : PIXEL_SCREEN_WIDTH;
+    // uint16_t height = g->height < PIXEL_SCREEN_HEIGHT? g->height: PIXEL_SCREEN_HEIGHT;
+    // memcpy(r->pixels, g->pixels, g->width * g->height * 4);
+    for(int i = 0; i < g->height * g->width; i++) {
+        // pixel colour = variant_colours[g->data[i].type_variant];
+        for(int j = 0; j < 4; j++) {
+            r->pixels[(i*4)+j] = variant_colours[g->data[i].type_variant][j];
+        }
+        // memcpy(r->pixels[i], variant_colours[g->data[i].type_variant], sizeof(pixel));
+    }
 }
 
 /**

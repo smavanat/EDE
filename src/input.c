@@ -1,5 +1,4 @@
 #include "../include/input.h"
-#include <stdio.h>
 #include <stdlib.h>
 
 input_handler *input_handler_init(void) {
@@ -38,8 +37,20 @@ void glfw_mouse_callback(GLFWwindow *window, int key, int action, int mods) {
 }
 
 void glfw_key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
-    if(glfwGetWindowAttrib(window, GLFW_FOCUSED) && key >= 65  && key < 91) {
-        int idx = key-KEY_A;
+    if(glfwGetWindowAttrib(window, GLFW_FOCUSED)) {
+        int idx = -1;
+        if(key >= 65  && key < 91) {
+            idx = key-KEY_A;
+        }
+        else if(key == GLFW_KEY_MINUS) {
+            idx = KEY_MINUS;
+        }
+        else if(key == GLFW_KEY_EQUAL) {
+            idx = KEY_PLUS;
+        }
+
+        if(idx == -1) return;
+
         if(action == GLFW_PRESS) {
             if(handler->key_status[idx] == KEY_JUST_PRESSED) {
                 handler->key_status[idx] = KEY_PRESSED;
