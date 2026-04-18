@@ -39,7 +39,7 @@ void render_init(renderer *r, char *vert_path, char *frag_path) {
     glEnableVertexAttribArray(3);
 
     //Getting the shader for this renderer
-    r->shader = load_shader(vert_path, frag_path);
+    r->shader = load_shader((shader_data[2]){(shader_data){vert_path, GL_VERTEX_SHADER}, (shader_data){frag_path, GL_FRAGMENT_SHADER}}, 2);
 
     //Setting the projection matrix
     glm_ortho(0.0f, SCREEN_WIDTH, SCREEN_HEIGHT, 0.0f, -1.0f, 1.0f, r->projection);
@@ -266,7 +266,7 @@ void pixel_render_init(pixel_renderer *r, char *vert_path, char *frag_path) {
     }
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
-    r->shader = load_shader(vert_path, frag_path);
+    r->shader = load_shader((shader_data[2]){(shader_data){vert_path, GL_VERTEX_SHADER}, (shader_data){frag_path, GL_FRAGMENT_SHADER}}, 2);
 
     float quadVertices[] = {
         // positions         // texCoords
@@ -422,7 +422,7 @@ void debug_render_init(debug_renderer *r, char *vert_path, char *frag_path) {
     glEnableVertexAttribArray(1);
 
     //Getting the shader for this renderer
-    r->shader = load_shader(vert_path, frag_path);
+    r->shader = load_shader((shader_data[2]){(shader_data){vert_path, GL_VERTEX_SHADER}, (shader_data){frag_path, GL_FRAGMENT_SHADER}}, 2);
 
     //Setting the projection matrix
     glm_ortho(0.0f, SCREEN_WIDTH, SCREEN_HEIGHT, 0.0f, -1.0f, 1.0f, r->projection);

@@ -8,7 +8,16 @@ typedef uint32_t shader;
 #ifdef __cplusplus
 extern "C" {
 #endif
-shader load_shader(char *vertexPath, char *fragmentPath);
+
+//Struct to store data about a shader that needs to be loaded
+typedef struct {
+    char *shader_path; //The path to the shader code
+    int shader_type; //The type of shader this represents
+} shader_data;
+
+shader load_shader_old(char *vertexPath, char *fragmentPath);
+shader load_shader(shader_data *sd, unsigned int num_shaders);
+uint32_t create_shader(shader_data s);
 
 void use(shader shader);
 
