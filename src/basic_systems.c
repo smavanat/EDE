@@ -47,23 +47,19 @@ void pixel_system_init(plaza *p, ecs_system *s) {
 
 void pixel_system_update(plaza *p, ecs_system *s, float dt) {
     //First deal with any external changes (erasures etc made to the pixel grid):
-    int ok;
-    pixel_op_callback *cb;
-    while(pixel_func_queue->size > 0) {
-        dequeue(pixel_func_queue, pixel_op_callback *, cb, ok);
-        if(!ok) break;
-        cb->func(cb->args);
-        free(cb->args);
-        free(cb);
-    }
+    // int ok;
+    // pixel_op_callback *cb;
+    // while(pixel_func_queue->size > 0) {
+    //     dequeue(pixel_func_queue, pixel_op_callback *, cb, ok);
+    //     if(!ok) break;
+    //     cb->func(cb->args);
+    //     free(cb->args);
+    //     free(cb);
+    // }
 
     static int left = 0;
     world_grid *old_grid = gb.grids[gb.curr];
     world_grid *new_grid = gb.grids[(gb.curr+1)%2];
-
-    //Adding a new particle every frame just for testing
-    // old_grid->data[48] = 100;
-    // memcpy(old_grid->pixels[48], (uint8_t[]){0xd6, 0xcd, 0x18, 0xff}, sizeof(pixel));
 
     clear_grid(new_grid);
 

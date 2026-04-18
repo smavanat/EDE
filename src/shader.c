@@ -27,7 +27,7 @@ shader load_shader(shader_data *sd, unsigned int num_shaders) {
     glGetProgramiv(s, GL_LINK_STATUS, &result);
     if(!result) {
         glGetProgramInfoLog(s, 512, NULL, infolog);
-        printf("ERROR::SHADER::COMPILATION_FAILED\n");
+        printf("ERROR::SHADER::LINKING_FAILED\n");
         for(int i = 0; i < 512; i++){
             if(infolog[i] == '\0') break;
             printf("%c", infolog[i]);

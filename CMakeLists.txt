@@ -39,6 +39,8 @@ if(NOT glfw_POPULATED)
 
 endif()
 
+# find_package(Vulkan REQUIRED)
+
 # Collect all .cpp files in current directory
 file(GLOB C_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
 set(SOURCES ${C_SOURCES})

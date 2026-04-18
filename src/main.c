@@ -152,7 +152,7 @@ void process_input(GLFWwindow* window) {
 int init(GLFWwindow **window) {
     //Initialising GLFW
     glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     #ifdef __APPLE__
@@ -221,6 +221,8 @@ int init(GLFWwindow **window) {
     gb.grids[0] = initialise_grid(PIXEL_SCREEN_WIDTH, PIXEL_SCREEN_HEIGHT);
     gb.grids[1] = initialise_grid(PIXEL_SCREEN_WIDTH, PIXEL_SCREEN_HEIGHT);
     gb.curr = 0;
+
+    initialise_gpu_sim();
 
     return 1;
 }
@@ -312,6 +314,7 @@ int main(int argc, char** argv) {
                 //     if(gb.grids[0]->parents[i] < -1) printf("Filled\n");
                 // }
                 //Update the world
+                update_gpu_sim();
                 world_update(w, dt);
                 //Draw the pixel grid
                 render_begin_pixel_frame(pRenderer);

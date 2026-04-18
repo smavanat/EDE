@@ -1,4 +1,5 @@
 #include "../include/pixel_sim.h"
+#include "../externals/glad/glad.h"
 #include <stdint.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -7,6 +8,7 @@
 #include "../include/list.h"
 #include "../include/input.h"
 #include "../include/rigidbody.h"
+#include "../include/shader.h"
 
 pixel variant_colours[NUM_PIXEL_TYPES] = {
     {0x00, 0x00, 0x00, 0x00}, //NONE
@@ -15,6 +17,78 @@ pixel variant_colours[NUM_PIXEL_TYPES] = {
     {0x6e, 0x31, 0x0d, 0xff}, //WOOD
     {0x69, 0x67, 0x65, 0xff}, //STONE
 };
+
+GLuint test;
+shader sh;
+shader sh_2;
+GLint brushPosLoc;
+GLint radiusLoc;
+GLuint vao;
+
+void initialise_gpu_sim(void) {
+    glCreateTextures(GL_TEXTURE_2D, 1, &test);
+    glTextureStorage2D(test, 1, GL_RGBA32F, PIXEL_SCREEN_WIDTH, PIXEL_SCREEN_HEIGHT);
+    glBindImageTexture(0, test, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+    glTextureParameteri(test, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTextureParameteri(test, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
+    sh = load_shader((shader_data[1]){"../data/shaders/colour.glsl", GL_COMPUTE_SHADER}, 1);
+    sh_2 = load_shader((shader_data[2]){(shader_data){"../data/shaders/colour_vert.vert", GL_VERTEX_SHADER}, (shader_data){"../data/shaders/colour_frag.frag", GL_FRAGMENT_SHADER}}, 2);
+    brushPosLoc = glGetUniformLocation(sh, "brushPos");
+    radiusLoc = glGetUniformLocation(sh, "radius");
+}
+
+void update_gpu_sim(void) {
+    glUseProgram(sh);
+    glBindImageTexture(0, test, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+
+    if(pixel_func_queue->size > 0) {
+        int ok;
+        pixel_op_callback *cb;
+        dequeue(pixel_func_queue, pixel_op_callback *, cb, ok);
+        if(cb->func == &add_pixel_callback) {
+            pixel_func_args *args = cb->args;
+            add_pixel_func_args *ea = (add_pixel_func_args *)args->extra_data;
+            int scale = ea->scale;
+            int x = args->cursor_pos.x;
+            int y = args->cursor_pos.y;
+
+            int texY = PIXEL_SCREEN_HEIGHT- y - 1;
+
+            glUniform2f(brushPosLoc, (float)x, (float) texY);
+            glUniform1f(radiusLoc, (float)scale);
+        }
+    }
+    else {
+            glUniform2f(brushPosLoc, 0.0f, 0.0f);
+            glUniform1f(radiusLoc, 0.0f);
+    }
+
+    glDispatchCompute((PIXEL_SCREEN_WIDTH + 7) / 8, (PIXEL_SCREEN_HEIGHT + 7) / 8, 1);
+    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT);
+
+    // Go back to default framebuffer (screen)
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // Set viewport to window size
+    glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+    // Use render shader
+    glUseProgram(sh_2);
+
+    // Bind texture for sampling
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, test);
+
+    // Tell shader texture unit
+    glUniform1i(glGetUniformLocation(sh_2, "screenTex"), 0);
+
+    // Draw fullscreen quad
+    glBindBuffer(GL_VERTEX_ARRAY, vao);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+}
 
 void update_pixel(world_grid *og, world_grid *ng, size_t index, int dir) {
     size_t new_index = index;

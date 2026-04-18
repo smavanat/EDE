@@ -8,15 +8,16 @@
 
 //NOTE: Have a look at this page: https://meatbatgames.com/blog/falling-sand-gpu/ for GPU shader ideas if you ever come back to it
 //      This is also a good repo: https://github.com/tranma/falling-sand-game?tab=readme-ov-file, https://github.com/GelamiSalami/GPU-Falling-Sand-CA/tree/main
+//      GOATED TUTORIAL by the same guy: https://blog.okkohakola.com/SandFall/SandFallIntro
 
 //TODO: Add more pixel types: Liquids, solids only for now
 //      Implement lookup table for default values
 //      Figure out how to handle particle lifetimes
-//      Figure out particle physics
+//      Figure out particle physics (forces, gravity, etc, maybe checkout powder toy source)
 //      Figure out gases
 //      Figure out how to handle things like temperature
 //      Figure out conversions e.g. Lava + water = stone+steam
-//      Chunk and Multithread, try margolus neighbourhoods maybe for some nice sub-chunk speeds?
+//      Chunk and Multithread, try margolus neighbourhoods maybe for some nice sub-chunk speeds? See this article on how Noita did it: https://80.lv/articles/noita-a-game-based-on-falling-sand-simulation
 #define PIXEL_SIZE 10
 
 typedef struct {
@@ -98,9 +99,18 @@ typedef struct {
     plaza *p;
 } add_pixel_func_args;
 
+typedef struct {
+    //Need to pad this out to 'whole' values (vec4/u32) because of std140 alignment rules
+    uint32_t cursor_pos[4];
+    uint32_t variant;
+    uint32_t radius;
+} brush_data;
+
 extern queue *pixel_func_queue;
 void erase_pixels_callback(pixel_func_args *args);
 void add_pixel_callback(pixel_func_args *args);
+void initialise_gpu_sim(void);
+void update_gpu_sim(void);
 
 extern b2WorldId world_id;
 
