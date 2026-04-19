@@ -1,10 +1,9 @@
-#version 330 core
+#version 430
+in vec2 v_uv;
+out vec4 fc;
 
-in vec2 uv;
-out vec4 FragColour;
+uniform sampler2D canvas_tex;
 
-uniform sampler2D screenTex;
-
-void main() {
-    FragColour = texture(screenTex, uv);
+void main(){
+    fc = texture(canvas_tex, v_uv);
 }

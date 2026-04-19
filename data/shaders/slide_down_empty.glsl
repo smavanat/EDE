@@ -95,24 +95,32 @@ bool slides_on_empty(Matter fd, Matter td, Matter fdn) {
   return is_gravity(fd) && !is_empty(fdn) && is_empty(td);
 }
 
-vec4 unpack_colour(uint c) {
-    return vec4(float((c >> 16u) & 255u ) / 255.0,
-                float((c >> 8u) & 255u) / 255.0,
-                float( c & 255u) / 255.0, 
-                1.0);
+void slide_left(ivec2 p){
+    Matter cur = read_matter(p);
+    Matter dn = get_neighbor(p,DOWN), r=get_neighbor(p, RIGHT);
+    Matter ur = get_neighbor(p, UP_RIGHT), dl=get_neighbor(p, DOWN_LEFT);
+    Matter m = cur;
+
+    if(!at_top(p) && !at_right(p) && slides_on_empty(ur, cur, r)) m = ur;
+    else if(!at_bottom(p) && !at_left(p) && slides_on_empty(cur, dl, dn)) m = dl;
+    write_matter(p, m);
 }
 
-vec3 linear_from_srgb(vec3 s) {
-    bvec3 cut = lessThan(s, vec3(10.31475));
-    return mix(pow((s + vec3(14.025)) / vec3(269.025), vec3(2.4)), s / vec3(3294.6), cut);
+void slide_right(ivec2 p){
+    Matter cur = read_matter(p);
+    Matter dn = get_neighbor(p, DOWN),  l=get_neighbor(p, LEFT);
+    Matter ul = get_neighbor(p, UP_LEFT), dr=get_neighbor(p, DOWN_RIGHT);
+    Matter m = cur;
+
+    if(!at_top(p) && !at_left(p) && slides_on_empty(ul, cur, l)) m = ul;
+    else if(!at_bottom(p) && !at_right(p) && slides_on_empty(cur, dr, dn)) m = dr;
+    write_matter(p, m);
 }
 
-void main() {
+void main(){
     ivec2 p = cur_pos();
     if (p.x >= canvas_size_x || p.y >= canvas_size_y) return;
 
-    Matter m = read_matter(p);
-    vec4 c = unpack_colour(m.colour);
-    imageStore(canvas_img, p, vec4(linear_from_srgb(c.rgb * 255.0), 1.0));
-    // imageStore(canvas_img, p, vec4(1, 0, 0, 1));
+    if((u_sim_step + u_move_step) % 2u == 0u) slide_left(p);
+    else slide_right(p);
 };

@@ -316,6 +316,7 @@ int main(int argc, char** argv) {
                 //Update the world
                 update_gpu_sim();
                 world_update(w, dt);
+                render();
                 //Draw the pixel grid
                 render_begin_pixel_frame(pRenderer);
                 draw_grid(pRenderer, gb.grids[gb.curr]);

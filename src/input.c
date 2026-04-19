@@ -39,8 +39,11 @@ void glfw_mouse_callback(GLFWwindow *window, int key, int action, int mods) {
 void glfw_key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
     if(glfwGetWindowAttrib(window, GLFW_FOCUSED)) {
         int idx = -1;
-        if(key >= 65  && key < 91) {
-            idx = key-KEY_A;
+        if(key >= 65  && key <= 90) {
+            idx = key-GLFW_KEY_A + KEY_A;
+        }
+        else if (key >= 48 && key <= 57) {
+            idx = key-GLFW_KEY_0+KEY_0;
         }
         else if(key == GLFW_KEY_MINUS) {
             idx = KEY_MINUS;

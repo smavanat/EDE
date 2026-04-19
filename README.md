@@ -29,13 +29,13 @@ The following is a list of features that I plan to add/have added to this projec
 Basic ECS  
 Rendering System including a debug renderer to draw primitives (points, lines, quads and circles)  
 Shader Loading  
-Synchronous Events (Observer Pattern and Publisher-Subscriber Pattern)  
+Pixel Grid  
+Rigidbody and Pixel Destruction  
+Basic Falling Sand Sim  
 ### Planned  
+Advanced Falling Sand Sim  
 Pathfinding System  
-Grid System  
-Destruction System  
 World Chunking  
 GUI for adding/removing/modifying/placing entities  
 World data loading and saving  
 Optimised ECS with entity chunking and proper archetypes  
-Asynchronous Events  

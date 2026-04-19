@@ -95,24 +95,19 @@ bool slides_on_empty(Matter fd, Matter td, Matter fdn) {
   return is_gravity(fd) && !is_empty(fdn) && is_empty(td);
 }
 
-vec4 unpack_colour(uint c) {
-    return vec4(float((c >> 16u) & 255u ) / 255.0,
-                float((c >> 8u) & 255u) / 255.0,
-                float( c & 255u) / 255.0, 
-                1.0);
-}
+void fall_empty(ivec2 p){
+    Matter cur = read_matter(p);
+    Matter up = get_neighbor(p, UP);
+    Matter dn = get_neighbor(p, DOWN);
+    Matter m = cur;
 
-vec3 linear_from_srgb(vec3 s) {
-    bvec3 cut = lessThan(s, vec3(10.31475));
-    return mix(pow((s + vec3(14.025)) / vec3(269.025), vec3(2.4)), s / vec3(3294.6), cut);
+    if(!at_top(p) && falls_on_empty(up, cur)) m = up;
+    else if(!at_bottom(p) && falls_on_empty(cur, dn)) m = dn;
+    write_matter(p,m);
 }
-
 void main() {
     ivec2 p = cur_pos();
     if (p.x >= canvas_size_x || p.y >= canvas_size_y) return;
 
-    Matter m = read_matter(p);
-    vec4 c = unpack_colour(m.colour);
-    imageStore(canvas_img, p, vec4(linear_from_srgb(c.rgb * 255.0), 1.0));
-    // imageStore(canvas_img, p, vec4(1, 0, 0, 1));
+    fall_empty(p);
 };

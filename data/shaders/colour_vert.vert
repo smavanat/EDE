@@ -1,16 +1,14 @@
-#version 330 core
+#version 430
+out vec2 v_uv;
+uniform bool flip_y;
 
-out vec2 uv;
+const vec2 V[4] = vec2[4](vec2(-1, -1), vec2(1, -1), vec2(-1, 1), vec2(1, 1));
+const vec2 U[4] = vec2[4](vec2(0, 0), vec2(1, 0), vec2(0, 1), vec2(1, 1));
 
-void main() {
-    vec2 positions[4] = vec2[](
-        vec2(-1.0, -1.0), // 0
-        vec2( 1.0, -1.0), // 1
-        vec2(-1.0,  1.0), // 2
-        vec2( 1.0,  1.0)  // 3
-    );
+void main(){
+    vec2 uv = U[gl_VertexID];
+    if(flip_y) uv.y = 1.0-uv.y;
 
-    vec2 pos = positions[gl_VertexID];
-    uv = (pos + 1.0) * 0.5;
-    gl_Position = vec4(pos, 0.0, 1.0);
+    v_uv = uv;
+    gl_Position = vec4(V[gl_VertexID],0,1);
 }

@@ -20,6 +20,17 @@
 //      Chunk and Multithread, try margolus neighbourhoods maybe for some nice sub-chunk speeds? See this article on how Noita did it: https://80.lv/articles/noita-a-game-based-on-falling-sand-simulation
 #define PIXEL_SIZE 10
 
+#define CANVAS_SIZE_X 160
+#define CANVAS_SIZE_Y 120
+#define LOCAL_SIZE_X 32
+#define LOCAL_SIZE_Y 32
+#define NUM_WORK_GROUPS_X (CANVAS_SIZE_X + LOCAL_SIZE_X - 1) / LOCAL_SIZE_X
+#define NUM_WORK_GROUPS_Y (CANVAS_SIZE_Y + LOCAL_SIZE_Y - 1) / LOCAL_SIZE_Y
+
+#define MATTER_EMPTY 0u
+#define MATTER_SAND 1u
+#define MATTER_WOOD 2u
+
 typedef struct {
     float ra;
     float rb;
@@ -111,6 +122,7 @@ void erase_pixels_callback(pixel_func_args *args);
 void add_pixel_callback(pixel_func_args *args);
 void initialise_gpu_sim(void);
 void update_gpu_sim(void);
+void render(void);
 
 extern b2WorldId world_id;
 

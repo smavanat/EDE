@@ -60,7 +60,9 @@ uint32_t create_shader(shader_data s) {
         int i = 0;
         while(s.shader_path[i] != '\0') {
             printf("%c", s.shader_path[i]);
+            i++;
         }
+        printf("\n");
         return NULL;
     }
 
@@ -77,6 +79,13 @@ uint32_t create_shader(shader_data s) {
     if(!result) {
         glGetShaderInfoLog(sh, 512, NULL, infolog);
         printf("ERROR::SHADER::COMPILATION_FAILED\n");
+        printf("Path: ");
+        int j = 0;
+        while(s.shader_path[j] != '\0') {
+            printf("%c", s.shader_path[j]);
+            j++;
+        }
+        printf("\n");
         for(int i = 0; i < 512; i++){
             if(infolog[i] == '\0') break;
             printf("%c", infolog[i]);
